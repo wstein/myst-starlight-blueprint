@@ -56,7 +56,10 @@ tool/src/
 │   ├── emit/MdxEmitter.kt       native-first emitter (→ <Aside>, Expressive Code, links)
 │   └── Transpiler.kt            frontmatter + imports + provenance banner
 ├── jvmMain/…/Cli.kt             JVM target → the CLI used in CI
-└── jsMain/…/WebApi.kt           JS target → the browser playground (@JsExport)
+├── jsMain/…/WebApi.kt           JS target → the browser playground (@JsExport)
+└── commonTest/…/blueprint/      unit tests for the shared core, incl. a fixtures/
+                                 package with a real mystmd AST capture — run via
+                                 `gradle jvmTest`, wired into CI before `jvmJar`
 ```
 
 The same `Transpiler.transpile(...)` runs in CI (as a JVM jar walking JSON files)
@@ -98,12 +101,11 @@ back. No React, no main-thread eval.
    Starlight, and deploys to Pages.
 
 Locally: `make pipeline` runs the whole chain (needs JDK 21, Node 22, `mystmd`).
+With Nix, `nix develop` drops you into a shell with JDK 21, Node 22, and Gradle
+already on `PATH` (matching CI); it still nudges you to `npm install -g mystmd`.
 
 ## Honest caveats
 
-- **Not CI-verified in this commit.** Versions in `build.gradle.kts` /
-  `site/package.json` are current-generation but pin/verify against your
-  environment before trusting the first build.
 - **mystmd AST path.** `myst build --site` writes resolved AST under
   `_build/site/content/`; confirm the exact path for your mystmd version and
   adjust `--in` if needed.
@@ -119,10 +121,11 @@ Locally: `make pipeline` runs the whole chain (needs JDK 21, Node 22, `mystmd`).
 ```
 .
 ├── README.md                     ← this blueprint
+├── CLAUDE.md                     ← guidance for Claude Code when working in this repo
 ├── Makefile                      ← `make pipeline`
 ├── package.json                  ← npm-script equivalents
 ├── .github/workflows/deploy.yml  ← self-render → GitHub Pages (+ MDX compile gate)
-├── tool/                         ← Kotlin Multiplatform transpiler (CLI + web)
+├── tool/                         ← Kotlin Multiplatform transpiler (CLI + web + tests)
 └── site/                         ← Astro Starlight + MyST source + live-eval island
     ├── myst/                     ← MyST source of truth
     ├── src/components/           ← CodeMirrorEval.astro + eval-worker.ts
