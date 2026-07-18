@@ -213,6 +213,14 @@ committed, so CI's `npm ci` had nothing to install from; and `astro.config.mjs`'
   once per file, letting the first call's download finish before the second
   starts. Since CI always builds from a clean checkout, the multi-file form
   would have failed on every run, not intermittently.
+- **Starlight's `autogenerate` sidebar silently renders empty for root-level
+  pages — use explicit `items` instead.** `{ autogenerate: { directory: '.' } }`
+  (and `''`) both matched zero routes against this site's two top-level pages,
+  so the sidebar rendered a group with an empty `<ul>` — no build error, no
+  `astro check` warning, both pages still directly reachable by URL. Only
+  surfaced by inspecting the built HTML. `astro.config.mjs` now lists pages
+  explicitly (`items: ['index', 'tool']`), mirroring `myst.yml`'s `toc` — keep
+  both in sync when adding a page.
 - **Web Worker is isolation, not a security sandbox.** Fine for trusted docs
   examples; don't run untrusted third-party code through it.
 - **Static live-eval only.** MyST's executable/notebook features are intentionally

@@ -159,8 +159,13 @@ Key design points to preserve when touching this code:
 - `site/astro.config.mjs`'s `SITE`/`BASE`/`social` values are set for this repo's
   own deployment (`wstein.github.io/myst-starlight-blueprint`) — anyone forking
   this as a template must repoint all three to their own GitHub Pages URL/repo.
-- Sidebar is currently `autogenerate` from the docs directory; the intent (per
-  README) is eventually to generate it from `myst.yml`'s `toc`, not yet wired up.
+- Sidebar entries in `astro.config.mjs` are listed explicitly (`items: ['index',
+  'tool']`), mirroring `site/myst/myst.yml`'s `toc` order — add new pages to
+  both. **Not** `autogenerate`: Starlight's directory-match against root-level
+  pages (`directory: '.'` or `''`) matched nothing, so the sidebar silently
+  rendered an empty group while both pages remained directly reachable by URL —
+  reachable, but invisible in nav. Caught only by inspecting the built HTML's
+  `<ul>`, not by any build error or `astro check` warning.
 - `site/public/` only ever holds the generated `blueprint.pdf` (gitignored, like
   the generated MDX) — `make pdf` / CI's PDF step must run before `astro build`
   so it's present to be copied into `site/dist/`.

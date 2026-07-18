@@ -17,8 +17,11 @@ export default defineConfig({
       // name (the array-of-{icon,label,href} shape isn't until Starlight 0.33).
       social: { github: 'https://github.com/wstein/myst-starlight-blueprint' },
       sidebar: [
-        // Generated from myst.yml TOC by the pipeline (see scripts/sidebar).
-        { label: 'Start here', autogenerate: { directory: '.' } },
+        // Mirrors site/myst/myst.yml's `toc` order. `autogenerate` was tried
+        // first but Starlight's directory-match against root-level pages
+        // (`directory: '.'` or `''`) matches nothing, silently rendering an
+        // empty sidebar group — explicit entries sidestep that entirely.
+        { label: 'Start here', items: ['index', 'tool'] },
       ],
     }),
   ],
