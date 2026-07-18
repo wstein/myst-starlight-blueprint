@@ -122,6 +122,14 @@ Most first-push failures are configuration, not code:
   `upload-pages-artifact@v3`, `deploy-pages@v4` — bump any that a newer major has
   since replaced.
 
+The full chain — `myst build --site` → transpile → `astro build` — has been run
+end-to-end locally against this repo's own content and produces a working
+`site/dist/` (search index included). Two failures only surfaced at that last,
+previously-unrun step, both now fixed here: `site/package-lock.json` wasn't
+committed, so CI's `npm ci` had nothing to install from; and `astro.config.mjs`'s
+`social` option used the array shape from Starlight ≥0.33 while `^0.30.0` (what
+`npm install` actually resolves) expects an object keyed by platform name.
+
 ## Honest caveats
 
 - **`MystNode` field assumptions are the ongoing risk.** `kind` on admonitions and
@@ -130,6 +138,11 @@ Most first-push failures are configuration, not code:
   of failing a build. `tool/src/commonTest/.../RealAstFixtureTest.kt` grounds the
   suite in a real `mystmd build --site` capture to catch this class of bug —
   extend that fixture (or add new ones) whenever you lean on a new AST field.
+- **Pinned versions are load-bearing, not decorative.** `@astrojs/starlight`
+  changed the shape of the `social` config option between 0.30 and 0.33 — a
+  caret range and the config calling it are coupled, and only `astro build`
+  (not `astro check`, not the Kotlin test suite) catches a mismatch. Re-run the
+  full pipeline after bumping anything in `site/package.json`.
 - **Web Worker is isolation, not a security sandbox.** Fine for trusted docs
   examples; don't run untrusted third-party code through it.
 - **Static live-eval only.** MyST's executable/notebook features are intentionally

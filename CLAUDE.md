@@ -157,6 +157,14 @@ Key design points to preserve when touching this code:
 - The exact resolved-AST output path (`site/myst/_build/site/content/`) depends on
   the installed `mystmd` version; adjust `--in` in `make transpile` /
   `npm run transpile` if it changes.
+- Pinned `site/package.json` versions are load-bearing: `@astrojs/starlight`
+  changed the shape of the `social` config option between 0.30 and 0.33 (object
+  keyed by platform name vs. an array of `{icon,label,href}`), and only
+  `astro build` catches a mismatch — `astro check` and the Kotlin test suite
+  don't touch `astro.config.mjs`. Re-run the full pipeline after bumping
+  anything under `site/`.
+- `site/package-lock.json` is committed on purpose — CI's `site` step runs
+  `npm ci`, which requires one; don't gitignore it.
 - The Web Worker in `eval-worker.ts` is isolation, not a security sandbox — fine
   for trusted docs examples, not for untrusted third-party code.
 - Live eval is static-output-only; MyST's executable/notebook features are
