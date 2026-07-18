@@ -35,18 +35,17 @@ jobs:
       # --- 3. Transpile AST -> MDX into Starlight ---
       - name: Transpile to MDX
         run: |
-          java -jar tool/build/libs/*-jvm.jar \
+          java -jar tool/build/libs/*-jvm.jar transpile \
             --in site/myst/_build/site/content \
             --out site/src/content/docs \
             --base /myst-starlight-blueprint
 
-      # --- 4. Export MyST -> PDF (Typst, no LaTeX needed) and merge each page's
-      #        export into one downloadable file. Must run before the site build
-      #        below, since Astro copies site/public/ verbatim into site/dist/. ---
+      # --- 4. Export each MyST page -> its own PDF (Typst, no LaTeX needed).
+      #        One PDF per page, not merged: the topbar's download link is
+      #        per-document. Must run before the site build below, since Astro
+      #        copies site/public/ verbatim into site/dist/. ---
       - uses: typst-community/setup-typst@v3
-      - name: Install qpdf
-        run: sudo apt-get update && sudo apt-get install -y qpdf
-      - name: Export and merge PDF
+      - name: Export PDFs
         run: |
           cd site/myst
           # One file per invocation, not `myst build --typst index.md tool.md`:
@@ -56,7 +55,8 @@ jobs:
           myst build --typst index.md --force
           myst build --typst tool.md --force
           mkdir -p ../public
-          qpdf --empty --pages exports/index.pdf exports/tool.pdf -- ../public/blueprint.pdf
+          cp exports/index.pdf ../public/index.pdf
+          cp exports/tool.pdf ../public/tool.pdf
 
       # --- 5. Build Starlight. `astro build` compiles every MDX file, so this
       #        step IS the MDX compile gate — invalid generated MDX fails here. ---

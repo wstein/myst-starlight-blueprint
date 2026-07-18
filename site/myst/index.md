@@ -18,9 +18,10 @@ The page you're reading is the proof, not a pitch: everything below was
 authored in MyST, transpiled to MDX by `myst2mdx`, and built by Astro
 Starlight — the pipeline demonstrating itself with its own output.
 
-**[Download this site as a PDF ↓](/blueprint.pdf)** — the same MyST source,
-exported through `mystmd`'s Typst pipeline and merged in CI; no separate
-content to maintain.
+**[Download this page as a PDF ↓](/index.pdf)** — the same MyST source,
+exported through `mystmd`'s Typst pipeline; no separate content to maintain.
+Every page has its own PDF (the topbar link above always points at the one
+for whatever page you're on).
 
 ## What "native" buys you
 
@@ -53,8 +54,11 @@ const fib = n => n < 2 ? n : fib(n - 1) + fib(n - 2);
 console.log([...Array(10)].map((_, i) => fib(i)).join(', '));
 ```
 
-Edit the code above and press Run — it evaluates in-browser, off the main
-thread.
+On the live site, that's a real editor: edit the code and press Run to
+evaluate it in-browser, off the main thread. In the PDF you're reading now,
+it's necessarily just the source — Typst has no JavaScript engine to run it
+against, so the interactivity above is the thing being demonstrated, not
+something a static export can reproduce.
 
 ```js
 // A normal fenced block goes through Expressive Code, exactly like the rest of

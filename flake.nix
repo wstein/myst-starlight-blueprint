@@ -14,13 +14,12 @@
       {
         devShells.default = pkgs.mkShell {
           # Matches CI (.github/workflows/deploy.yml): temurin-21 + node-22 +
-          # typst/qpdf for the PDF export (`make pdf`) — no LaTeX needed.
+          # typst for the PDF export (`make pdf`) — no LaTeX needed.
           packages = [
             pkgs.jdk21
             pkgs.nodejs_22
             pkgs.gradle
             pkgs.typst
-            pkgs.qpdf
           ];
 
           JAVA_HOME = pkgs.jdk21.home;

@@ -57,7 +57,11 @@ A deliberate **orchestrator**, not a documentation engine. It doesn't parse MyST
 (mystmd does) or render generic Markdown (MDX/Astro does). It owns exactly the
 parts that encode *your policy*. Its CLI is `myst2mdx` (`gradle jvmJar` builds
 `myst2mdx-jvm.jar`), and every generated MDX file carries its name in a
-provenance banner comment:
+provenance banner comment. The CLI is one jar with subcommands, not one flat
+command: `myst2mdx transpile --in ... --out ...` is the original,
+CI-invoked path; `dokka2typst`/`dokka2mdx` convert Dokka-generated HTML
+(`Html2Typst`/`Html2Mdx`, tested against real `gradle dokkaGenerate` output)
+but aren't called from any pipeline yet — reachable and correct, not wired up:
 
 ```
 tool/src/
@@ -67,7 +71,8 @@ tool/src/
 │   ├── emit/NodeMapping.kt      native-vs-fallback set + admonition collapse table
 │   ├── emit/MdxEmitter.kt       native-first emitter (→ <Aside>, Expressive Code, links)
 │   └── Transpiler.kt            frontmatter + imports + provenance banner
-├── jvmMain/…/Cli.kt             JVM target → the CLI used in CI
+├── jvmMain/…/Cli.kt             JVM target → myst2mdx transpile|dokka2typst|dokka2mdx
+├── jvmMain/…/dokka/             Html2Typst + Html2Mdx — HTML -> Typst/MDX, jsoup-backed
 ├── jsMain/…/WebApi.kt           JS target → transpileToMdx(), exported (@JsExport)
 └── commonTest/…/blueprint/      unit tests for the shared core, incl. a fixtures/
                                  package with a real mystmd AST capture — run via
@@ -108,21 +113,25 @@ admonition-collapse table live rather than just describing it).
 Each MyST page declares a Typst export in its own frontmatter
 (`exports: [{format: typst, template: lapreprint-typst}]`); CI runs
 `myst build --typst <file>` once per page (see [Honest
-caveats](#honest-caveats) for why not one multi-file invocation) to render one
-PDF per page, then merges them with `qpdf` into `site/public/blueprint.pdf` —
-picked up by `astro build` like any other static asset and linked from the
-site as **Download this site as a PDF**.
+caveats](#honest-caveats) for why not one multi-file invocation) to render its
+own PDF, copied to `site/public/<slug>.pdf` — picked up by `astro build` like
+any other static asset. Each page links to *its own* PDF from a topbar
+download link (`site/src/components/HeaderWithPdf.astro`), not a single
+shared link, since there's no combined PDF to point at.
 Typst, not LaTeX: `mystmd`'s `--pdf` flag shells out to `latexmk`, which needs a
 full TeX distribution; `--typst` shells out to the `typst` CLI, a single ~40MB
 binary with no package manager to provision. Run it locally with `make pdf`
-(needs `typst` and `qpdf` — both in `flake.nix`'s devShell).
+(needs `typst` — in `flake.nix`'s devShell).
 
 mystmd's own project-level "combined book" export (one `exports:` entry in
 `myst.yml`, referencing the whole `toc`) looked like the more obvious way to
 produce a single multi-page PDF, but only rendered one of the two pages when
-tried against this repo's content — a per-page export merged after the fact
-turned out to be the reliable path. See
-[Honest caveats](#honest-caveats) for what that per-page split costs.
+tried against this repo's content. Per-page exports sidestepped that bug
+entirely — and turned out to be what "download the page you're on" actually
+wants anyway, once the topbar link needed to be per-document rather than
+site-wide. See [Honest caveats](#honest-caveats) for the one thing per-page
+export still costs: no shared front matter or continuous pagination if you
+wanted one combined document.
 
 ## Use it as a template
 
@@ -134,7 +143,7 @@ turned out to be the reliable path. See
    transpiles, builds Starlight, and deploys to Pages.
 
 Locally: `make pipeline` runs the whole chain — tool, MyST, transpile, PDF
-export, site build — (needs JDK 21, Node 22, `mystmd`, `typst`, `qpdf`).
+export, site build — (needs JDK 21, Node 22, `mystmd`, `typst`).
 A `flake.nix` is provided — `nix develop` (or `direnv allow`, via the checked-in
 `.envrc`) drops you into a shell with all of those already on `PATH` except
 `mystmd` (matching CI apart from the one `npm install -g mystmd` step you still
@@ -157,11 +166,11 @@ Most first-push failures are configuration, not code:
   `.github/workflows/deploy.yml` are still current majors — GitHub's Security tab
   flags outdated actions on the repo once it's live.
 
-The full chain — `myst build --site` → transpile → PDF export/merge →
+The full chain — `myst build --site` → transpile → per-page PDF export →
 `astro build` — has been run end-to-end locally against this repo's own
-content and produces a working `site/dist/` (search index and downloadable PDF
-included). Three failures only surfaced by actually running it, all now fixed
-here: `site/myst/myst.yml`'s `site.template: none`
+content and produces a working `site/dist/` (search index and per-page
+downloadable PDFs included). Three failures only surfaced by actually running
+it, all now fixed here: `site/myst/myst.yml`'s `site.template: none`
 wasn't a real template — `myst build --site` always resolves and downloads an
 actual site template, so it 404'd looking one up literally named "none" (fixed
 by pinning `template: book-theme`, which is what it silently falls back to
@@ -190,15 +199,14 @@ committed, so CI's `npm ci` had nothing to install from; and `astro.config.mjs`'
   exactly one page (no internal links) until a second page was added, which is
   why this class of bug went undetected until then; forking this template means
   updating `--base` in `Makefile`/`package.json`/CI alongside `astro.config.mjs`.
-- **The merged PDF is stapled-together preprints, not one seamless book.**
-  Each page renders through `lapreprint-typst` independently (its own "Open
-  Access" banner, its own page numbering starting back at 1), then `qpdf`
-  concatenates the results — there's no shared front matter or continuous
-  pagination across pages. Cross-page anchor links (e.g. a link into a specific
-  heading on *another* MyST page) also can't be used in source that feeds the
-  PDF export: each page compiles to Typst independently, so a fragment that
-  only exists in a different page's document is an unresolved-label error at
-  compile time, not a build-time warning.
+- **PDFs are per-page, deliberately — not one combined document.** Each page
+  renders through `lapreprint-typst` independently (its own "Open Access"
+  banner, its own page numbering starting back at 1), and the topbar's
+  download link always points at whichever page you're on. Cross-page anchor
+  links (e.g. a link into a specific heading on *another* MyST page) can't be
+  used in source that feeds the PDF export: each page compiles to Typst
+  independently, so a fragment that only exists in a different page's document
+  is an unresolved-label error at compile time, not a build-time warning.
 - **The upstream Typst templates fetch over the network at build time and are
   outside this repo's control.** `myst build --typst` downloads
   `lapreprint-typst` (and any other named template) fresh from
@@ -229,6 +237,14 @@ committed, so CI's `npm ci` had nothing to install from; and `astro.config.mjs`'
   examples; don't run untrusted third-party code through it.
 - **Static live-eval only.** MyST's executable/notebook features are intentionally
   out of scope; this path renders static output by design.
+- **The same MyST source feeds both the interactive site and the static PDF**,
+  so prose describing the `js-eval` block couldn't just say "press Run" —
+  that instruction is meaningless in a PDF Typst compiled from source it can't
+  execute. `index.md` now reads "on the live site... in the PDF you're reading
+  now, it's necessarily just the source," true in both contexts, rather than
+  writing format-conditional MyST (which doesn't exist) or pre-computing and
+  embedding the evaluated output (fragile — would silently go stale if the
+  sample code ever changed).
 - **Starlight inner aside markup.** The emitter targets `<Aside>`; if you ever
   bypass it and hand-write aside classes, match Starlight's rendered structure.
 - **The JS target's browser playground is unbuilt.** `WebApi.kt`'s own doc
@@ -253,14 +269,14 @@ committed, so CI's `npm ci` had nothing to install from; and `astro.config.mjs`'
 ├── LICENSE                       ← MIT
 ├── Makefile                      ← `make pipeline`
 ├── package.json                  ← npm-script equivalents
-├── flake.nix                     ← `nix develop` — JDK 21 + Node 22 + Gradle + Typst + qpdf
+├── flake.nix                     ← `nix develop` — JDK 21 + Node 22 + Gradle + Typst
 ├── .github/workflows/deploy.yml  ← self-render → GitHub Pages (+ MDX compile gate)
-├── tool/                         ← `myst2mdx`, the Kotlin Multiplatform transpiler (CLI + web + tests)
+├── tool/                         ← `myst2mdx`, the Kotlin Multiplatform transpiler + Dokka converters
 └── site/                         ← Astro Starlight + MyST source + live-eval island
     ├── myst/                     ← MyST source of truth (index.md, tool.md, myst.yml)
-    ├── src/components/           ← CodeMirrorEval.astro + eval-worker.ts
+    ├── src/components/           ← CodeMirrorEval.astro, eval-worker.ts, HeaderWithPdf.astro
     ├── src/styles/myst-shim.css  ← orphan-construct shim (Starlight tokens)
-    ├── public/                   ← generated: merged blueprint.pdf lands here pre-build
+    ├── public/                   ← generated: one PDF per page lands here pre-build
     └── astro.config.mjs
 ```
 

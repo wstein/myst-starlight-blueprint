@@ -31,7 +31,7 @@ it or add content there expecting it to persist.
 ## Commands
 
 Local pipeline requires JDK 21, Node 22, `mystmd` (`npm install -g mystmd`),
-`typst`, and `qpdf` (both used only by `make pdf`).
+and `typst` (used only by `make pdf`).
 `flake.nix` provides a Nix devShell with all of those except `mystmd`
 pre-wired — `nix develop` (or `direnv allow` via the checked-in `.envrc`).
 
@@ -39,8 +39,8 @@ pre-wired — `nix develop` (or `direnv allow` via the checked-in `.envrc`).
 make pipeline     # full chain: tool -> myst -> transpile -> pdf -> site
 make tool         # cd tool && gradle jvmTest jvmJar   (tests, then builds the fat JVM CLI jar)
 make myst         # cd site/myst && myst build --site   (resolve MyST -> AST JSON)
-make transpile    # java -jar tool/build/libs/*-jvm.jar --in <ast-json-dir> --out site/src/content/docs --base <astro-base>
-make pdf          # myst build --typst per page, merge with qpdf -> site/public/blueprint.pdf
+make transpile    # java -jar tool/build/libs/*-jvm.jar transpile --in <ast-json-dir> --out site/src/content/docs --base <astro-base>
+make pdf          # myst build --typst per page -> site/public/<slug>.pdf (no merge — see rough edges)
 make site         # cd site && npm ci && npm run build   (also the MDX compile gate)
 make clean        # rm generated .mdx, _build, exports, public, dist, tool/build
 ```
@@ -49,9 +49,15 @@ make clean        # rm generated .mdx, _build, exports, public, dist, tool/build
 (`myst:build`, `transpile`, `site:build`).
 
 Kotlin tool (`myst2mdx`), run from `tool/`:
+- The CLI is one jar with subcommands, not three binaries:
+  `java -jar myst2mdx-jvm.jar transpile|dokka2typst|dokka2mdx --in <dir> --out <dir>`
+  (`transpile` also takes `--base`). Only `transpile` is invoked from anywhere
+  (`make transpile` / CI) — `dokka2typst`/`dokka2mdx` are reachable and tested
+  but not called from any pipeline yet, same "built, not wired" status as the
+  converters they front (see rough edges below).
 - `gradle jvmJar` — build the CLI fat jar (`tool/build/libs/myst2mdx-jvm.jar`,
   matched by the `*-jvm.jar` glob elsewhere; bundles the runtime classpath,
-  main class `blueprint.CliKt`, CLI command name `myst2mdx`)
+  main class `blueprint.CliKt`)
 - `gradle jvmTest` — run `commonTest` + `jvmMain`-specific tests on the JVM target
   (this is what CI and `make tool` run before `jvmJar`)
 - `gradle jsBrowserProductionWebpack` (or equivalent JS target task) — build the
@@ -74,9 +80,9 @@ Astro site, run from `site/`:
 - `npm run check` — `astro check` (type/diagnostics check)
 
 CI (`.github/workflows/deploy.yml`) runs the exact same steps on push to `main`
-(build tool jar → resolve MyST AST → transpile → export+merge PDF → build+deploy
-site), so it is the authoritative sequence if `make pipeline` and CI ever
-diverge. The PDF step must run before the site build — Astro copies
+(build tool jar → resolve MyST AST → transpile → export per-page PDFs →
+build+deploy site), so it is the authoritative sequence if `make pipeline` and
+CI ever diverge. The PDF step must run before the site build — Astro copies
 `site/public/` verbatim into `site/dist/` at build time.
 
 ## Architecture
@@ -144,10 +150,13 @@ Key design points to preserve when touching this code:
   `title` when the author's title differs from the kind's default, to avoid
   duplicating Starlight's own default title.
 
-### `tool/jvmMain/…/dokka/` — HTML-to-Typst / HTML-to-MDX converters (unwired)
+### `tool/jvmMain/…/dokka/` — HTML-to-Typst / HTML-to-MDX converters
 
 Two standalone, unrelated-to-MyST converters, `jvmMain`-only (both depend on
-`jsoup`, JVM-only):
+`jsoup`, JVM-only), reachable via the CLI's `dokka2typst`/`dokka2mdx`
+subcommands and verified against real `gradle dokkaGenerate` output (49 real
+pages of this project's own KDoc, not just hand-written test HTML — see
+`RealDokkaFixtureTest`):
 
 - `Html2Typst` — ported from `adriandelgado/html2typst` (Rust, MIT) and
   extended with `<pre>`/`<code>`/`<table>` support, which upstream leaves as
@@ -163,14 +172,22 @@ Two standalone, unrelated-to-MyST converters, `jvmMain`-only (both depend on
   channels) rather than a second escaping implementation, so output escapes
   exactly like `myst2mdx`'s own MyST-derived MDX.
 
-**Neither is wired into anything.** No Dokka dependency exists in this
-project, no CI step calls either converter, no CLI command exposes them, and
-neither is merged into `blueprint.pdf` or `site/src/content/docs/`. They exist
-as tested (`Html2TypstTest`, `Html2MdxTest`) but standalone utility code —
-built as the first phase of a KDoc -> published-docs pipeline that stalled
-there. Wiring either one to real Dokka output (adding the Dokka Gradle plugin,
-a CLI entry point, a merge step) is unscoped, deliberately deferred work — see
-[Known rough edges](#known-rough-edges-per-readmes-own-caveats).
+Both scope conversion to Dokka's `id="content"` element, not the whole
+`<body>` — everything outside it is site chrome (top nav, breadcrumbs, the
+"Link copied to clipboard" copy-button tooltip), found only by running
+against real output; falls back to `<body>` for non-Dokka HTML so this stays
+a general converter. Real Dokka's deeply nested chrome divs also produce
+blank-line runs, collapsed in both converters' final output.
+
+**Still not wired into any pipeline.** No Dokka dependency is applied outside
+`tool/build.gradle.kts`'s own `dokkaGenerate` task (which nothing else
+depends on), no CI step calls either CLI subcommand, and nothing merges their
+output into a PDF or `site/src/content/docs/`. What changed from "unwired
+code" to "wired tool": the converters are reachable from outside a test suite
+now (`java -jar myst2mdx-jvm.jar dokka2mdx --in <dokka-html-dir> --out <dir>`)
+and proven correct against the real corpus, not just fixtures — the actual
+missing piece is a pipeline *around* the CLI (a Gradle task chain, a merge
+step, frontmatter injection), not the conversion logic itself.
 
 ### `site/` — Astro Starlight
 
@@ -193,19 +210,39 @@ a CLI entry point, a merge step) is unscoped, deliberately deferred work — see
   own deployment (`wstein.github.io/myst-starlight-blueprint`) — anyone forking
   this as a template must repoint all three to their own GitHub Pages URL/repo.
 - Sidebar entries in `astro.config.mjs` are listed explicitly (`items: ['index',
-  'tool', {label, link}]`), mirroring `site/myst/myst.yml`'s `toc` order — add
-  new pages to both. The PDF link lives in the sidebar itself (not just as a
-  paragraph in `index.md`) specifically so it's reachable from every page, not
-  only the homepage — Starlight's sidebar `link` values are base-prefixed
-  automatically, unlike a raw href written directly in MyST/MDX content.
-  **Not** `autogenerate`: Starlight's directory-match against root-level
+  'tool']`), mirroring `site/myst/myst.yml`'s `toc` order — add new pages to
+  both. **Not** `autogenerate`: Starlight's directory-match against root-level
   pages (`directory: '.'` or `''`) matched nothing, so the sidebar silently
   rendered an empty group while both pages remained directly reachable by URL —
   reachable, but invisible in nav. Caught only by inspecting the built HTML's
   `<ul>`, not by any build error or `astro check` warning.
-- `site/public/` only ever holds the generated `blueprint.pdf` (gitignored, like
-  the generated MDX) — `make pdf` / CI's PDF step must run before `astro build`
-  so it's present to be copied into `site/dist/`.
+- `site/public/` holds one generated PDF per page (`index.pdf`, `tool.pdf`;
+  gitignored, like the generated MDX) — `make pdf` / CI's PDF step must run
+  before `astro build` so they're present to be copied into `site/dist/`.
+  Not merged into one file: see `HeaderWithPdf.astro` below.
+- `site/src/components/HeaderWithPdf.astro` overrides Starlight's `Header`
+  (`components: { Header: ... }` in `astro.config.mjs`) to add a per-page
+  "Download as PDF" link in the topbar. Starlight's own `Header.astro` has no
+  `<slot/>`, so wrapping it silently drops any extra content — this
+  reconstructs the header instead, importing the same sub-components
+  (`SiteTitle`, `Search`, `SocialIcons`, `ThemeSelect`, `LanguageSelect`) Header
+  itself uses. Two things to know before touching it:
+  - **Route data comes from `Astro.props`, not `Astro.locals.starlightRoute`.**
+    The latter is a newer Starlight API that doesn't exist in the `^0.30.0`
+    pinned here (grepped `node_modules` to confirm before assuming it) —
+    0.30.x passes route data as `Astro.props` instead, per the installed
+    `Header.astro`'s own source (`<SiteTitle {...Astro.props} />` etc).
+  - **The PDF link uses an explicit page allowlist**, not "does a route id
+    exist" — `404.astro` also has a route id (`"404"`, not `undefined`), so an
+    existence check alone linked to a nonexistent `404.pdf`. The allowlist
+    (`PAGES_WITH_PDF`) is a third place (alongside `myst.yml`'s `toc` and
+    `astro.config.mjs`'s sidebar `items`) that must be kept in sync when a
+    page is added.
+- `site/tsconfig.json` and `site/src/env.d.ts` didn't exist before
+  `HeaderWithPdf.astro` needed `import.meta.env.BASE_URL` typed — every Astro
+  project is normally scaffolded with both; this one wasn't. Standard content
+  (`{"extends": "astro/tsconfigs/strict"}` and
+  `/// <reference types="astro/client" />`), not project-specific.
 
 ## Known rough edges (per README's own caveats)
 
@@ -249,8 +286,10 @@ a CLI entry point, a merge step) is unscoped, deliberately deferred work — see
   content it silently rendered only one of the two pages (the other was pulled
   in as a link-resolution "dependency," not merged content) despite logging
   "Built 2 pages for export." The working alternative: each page declares its
-  own per-file `exports:` entry, `myst build --typst` renders each to its own
-  PDF, and `qpdf` merges them after the fact — see `make pdf`.
+  own per-file `exports:` entry and `myst build --typst` renders each to its
+  own PDF — which turned out to be what was actually wanted anyway, once the
+  download link needed to be per-page (topbar) rather than site-wide — see
+  `make pdf` and `HeaderWithPdf.astro` above.
 - Cross-page anchor links (a link into a specific heading on a *different* MyST
   page, e.g. `[text](./tool.md#some-heading)`) work fine for the Starlight site
   but break the PDF export: each page compiles to Typst independently, so a
@@ -274,9 +313,15 @@ a CLI entry point, a merge step) is unscoped, deliberately deferred work — see
   TeX distribution installed (`which latexmk` is checked and fails otherwise).
   `--typst` needs only the `typst` CLI, a single ~40MB binary — that's why the
   PDF pipeline uses Typst, not LaTeX.
-- **`Html2Typst`/`Html2Mdx` (`tool/jvmMain/…/dokka/`) are tested but not wired
-  to anything.** No Dokka dependency, no CI step, no CLI command, no merge
-  into `blueprint.pdf` or `site/src/content/docs/`. Before wiring either one
-  up: Dokka's Markdown/GFM output format is itself "currently in Alpha" per
-  its own README, and neither converter has been run against real Dokka HTML
-  yet, only hand-written fixtures — expect gaps once real output meets them.
+- **`Html2Typst`/`Html2Mdx` are verified against real Dokka output and
+  CLI-reachable, but still not wired into any pipeline.** `gradle
+  dokkaGenerate` + `dokka2typst`/`dokka2mdx` all work and are tested against a
+  real captured page (`RealDokkaFixtureTest`), not just hand-written fixtures
+  — but nothing calls them automatically. Missing before this is a real
+  feature: a Gradle task chaining `dokkaGenerate` into the CLI, frontmatter
+  injection for the MDX output, and a merge/copy step into `site/public/` or
+  `site/src/content/docs/`. Note if picking this up later: Dokka's *own*
+  Markdown/GFM output format (a different thing from these converters, which
+  consume Dokka's HTML output) is "currently in Alpha" per Dokka's own
+  README — irrelevant to the HTML-consuming converters here, but worth not
+  confusing the two if extending this further.
