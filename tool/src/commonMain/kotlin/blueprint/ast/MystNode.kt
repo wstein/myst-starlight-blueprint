@@ -22,6 +22,9 @@ class MystNode(private val obj: JsonObject) {
     /** Arbitrary string field, e.g. kind, url, lang, identifier, alt. */
     fun str(key: String): String? = (obj[key] as? JsonPrimitive)?.contentOrNull
 
+    /** Nested JSON object field as a MystNode, e.g. a page document's `mdast` tree. */
+    fun child(key: String): MystNode? = (obj[key] as? JsonObject)?.let(::MystNode)
+
     /** Source pointer for provenance comments, if mystmd attached one. */
     val source: String?
         get() = str("key") ?: str("source")

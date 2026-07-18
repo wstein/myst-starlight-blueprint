@@ -15,7 +15,9 @@ class MdxEmitter {
     val imports = linkedSetOf<String>()
 
     fun emit(node: MystNode): String = when (node.type) {
-        "root"          -> block(node)
+        // mystmd wraps each top-level flow section in a "block" node; it carries
+        // no rendering of its own, so it passes through exactly like "root".
+        "root", "block" -> block(node)
         "paragraph"     -> inline(node) + "\n\n"
         "heading"       -> "#".repeat((node.str("depth")?.toIntOrNull() ?: 1)) +
                            " " + inline(node) + "\n\n"
@@ -24,10 +26,13 @@ class MdxEmitter {
         "code"          -> code(node)
         "admonition"    -> aside(node)
         "thematicBreak" -> "---\n\n"
-        else            -> inline(node) + "\n\n"
+        else            -> if (NodeMapping.isNative(node.type)) inline(node) + "\n\n"
+                           else HtmlFallback.render(node) + "\n\n"
     }
 
-    private fun block(node: MystNode) = node.children.joinToString("") { emit(it) }
+    private fun block(node: MystNode) = emitChildren(node.children)
+
+    private fun emitChildren(children: List<MystNode>) = children.joinToString("") { emit(it) }
 
     /** Inline-level rendering (text spans). */
     private fun inline(node: MystNode): String = node.children.joinToString("") { child ->
@@ -67,12 +72,23 @@ class MdxEmitter {
         return "$f$lang\n$body\n$f\n\n"
     }
 
+    /**
+     * mystmd always emits a leading `admonitionTitle` child (defaulted from
+     * `kind`, e.g. "Note"), not a `title` string attribute. Only forward it as an
+     * explicit <Aside title> when the author overrode the default text —
+     * otherwise Starlight's own default title would be duplicated in the body.
+     */
     private fun aside(node: MystNode): String {
         imports.add("import { Aside } from '@astrojs/starlight/components';")
-        val type = NodeMapping.asideType(node.str("kind"))
-        val title = node.str("title")
-        val open = if (title != null) "<Aside type=\"$type\" title=\"${MdxEscaper.attr(title)}\">"
-                   else "<Aside type=\"$type\">"
-        return "$open\n${block(node).trim()}\n</Aside>\n\n"
+        val kind = node.str("kind")
+        val type = NodeMapping.asideType(kind)
+        val titleNode = node.children.firstOrNull { it.type == "admonitionTitle" }
+        val titleText = titleNode?.let(::inline)?.trim()
+        val defaultTitle = kind?.replaceFirstChar(Char::uppercaseChar)
+        val bodyChildren = node.children.filterNot { it.type == "admonitionTitle" }
+        val open = if (titleText != null && titleText != defaultTitle)
+            "<Aside type=\"$type\" title=\"${MdxEscaper.attr(titleText)}\">"
+        else "<Aside type=\"$type\">"
+        return "$open\n${emitChildren(bodyChildren).trim()}\n</Aside>\n\n"
     }
 }

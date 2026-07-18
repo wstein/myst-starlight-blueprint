@@ -10,7 +10,7 @@ object NodeMapping {
 
     /** Node types the emitter renders natively. Anything else -> HTML fallback. */
     val NATIVE = setOf(
-        "root", "paragraph", "text", "strong", "emphasis", "inlineCode",
+        "root", "block", "paragraph", "text", "strong", "emphasis", "inlineCode",
         "code", "heading", "link", "list", "listItem", "admonition",
         "crossReference", "image", "break", "thematicBreak"
     )

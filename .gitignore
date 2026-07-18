@@ -7,3 +7,4 @@ site/dist/
 .astro/
 tool/build/
 .gradle/
+.kotlin/

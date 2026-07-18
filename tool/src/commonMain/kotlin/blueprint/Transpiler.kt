@@ -12,18 +12,20 @@ import blueprint.emit.MdxEmitter
 object Transpiler {
 
     fun transpile(astJson: String, sourcePath: String): String {
-        val root = MystNode.parse(astJson)
+        val doc = MystNode.parse(astJson)
+        val mdast = doc.child("mdast")
+            ?: error("Malformed resolved AST for $sourcePath: missing \"mdast\" root")
         val emitter = MdxEmitter()
-        val body = emitter.emit(root)
+        val body = emitter.emit(mdast)
 
-        val title = root.frontmatterStr("title")
-            ?: root.frontmatterStr("label")
+        val title = doc.frontmatterStr("title")
+            ?: doc.frontmatterStr("label")
             ?: sourcePath.substringAfterLast('/').substringBeforeLast('.')
 
         val fm = buildString {
             append("---\n")
             append("title: ").append(yaml(title)).append('\n')
-            root.frontmatterStr("description")?.let {
+            doc.frontmatterStr("description")?.let {
                 append("description: ").append(yaml(it)).append('\n')
             }
             append("---\n")
