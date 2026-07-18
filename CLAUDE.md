@@ -39,7 +39,7 @@ needs its own `npm install -g mystmd`.
 make pipeline     # full chain: tool -> myst -> transpile -> site
 make tool         # cd tool && gradle jvmTest jvmJar   (tests, then builds the fat JVM CLI jar)
 make myst         # cd site/myst && myst build --site   (resolve MyST -> AST JSON)
-make transpile    # java -jar tool/build/libs/*-jvm.jar --in <ast-json-dir> --out site/src/content/docs
+make transpile    # java -jar tool/build/libs/*-jvm.jar --in <ast-json-dir> --out site/src/content/docs --base <astro-base>
 make site         # cd site && npm ci && npm run build   (also the MDX compile gate)
 make clean        # rm generated .mdx, _build, dist, tool/build
 ```
@@ -138,8 +138,8 @@ Key design points to preserve when touching this code:
 
 ### `site/` — Astro Starlight
 
-- `site/myst/` is the actual authored content (`index.md`, `myst.yml` TOC). This
-  is what you edit when changing docs content.
+- `site/myst/` is the actual authored content (`index.md`, `tool.md`, `myst.yml`
+  TOC). This is what you edit when changing docs content.
 - `site/src/content/docs/**/*.mdx` is generated output (gitignored) — only exists
   after running the transpile step; don't expect it to be present in a fresh
   checkout or to persist edits.
@@ -174,6 +174,12 @@ Key design points to preserve when touching this code:
   anything under `site/`.
 - `site/package-lock.json` is committed on purpose — CI's `site` step runs
   `npm ci`, which requires one; don't gitignore it.
+- `make transpile`'s `--base` must equal `site/astro.config.mjs`'s `BASE` —
+  mystmd resolves internal links to root-relative paths with no knowledge of
+  Astro's subpath deploy, so `MdxEmitter`/`Cli.kt` re-prefix them at transpile
+  time from this flag. It's a second copy of the same value, not derived from
+  `astro.config.mjs`; keep `Makefile`, `package.json`, and
+  `.github/workflows/deploy.yml` in sync with it.
 - The Web Worker in `eval-worker.ts` is isolation, not a security sandbox — fine
   for trusted docs examples, not for untrusted third-party code.
 - Live eval is static-output-only; MyST's executable/notebook features are

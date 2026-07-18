@@ -94,6 +94,11 @@ stays tiny.
 editor contents to a sandboxed Web Worker and streams the console output back. No
 React, no main-thread eval. [Try it on the live site →](https://wstein.github.io/myst-starlight-blueprint/)
 
+The site itself is two pages: `site/myst/index.md` (this pitch, live) and
+[`site/myst/tool.md`](https://wstein.github.io/myst-starlight-blueprint/tool)
+(the architecture walkthrough above, authored in MyST and demonstrating its own
+admonition-collapse table live rather than just describing it).
+
 ## Use it as a template
 
 1. Click **Use this template** on GitHub (or fork).
@@ -150,6 +155,13 @@ committed, so CI's `npm ci` had nothing to install from; and `astro.config.mjs`'
   caret range and the config calling it are coupled, and only `astro build`
   (not `astro check`, not the Kotlin test suite) catches a mismatch. Re-run the
   full pipeline after bumping anything in `site/package.json`.
+- **`--base` is a second copy of `astro.config.mjs`'s `BASE`, not derived from
+  it.** mystmd resolves internal links/xrefs to root-relative paths with no
+  knowledge of Astro's subpath deployment, so the CLI's `--base` flag re-prefixes
+  them at transpile time — but only if it's kept equal to `BASE`. This site had
+  exactly one page (no internal links) until a second page was added, which is
+  why this class of bug went undetected until then; forking this template means
+  updating `--base` in `Makefile`/`package.json`/CI alongside `astro.config.mjs`.
 - **Web Worker is isolation, not a security sandbox.** Fine for trusted docs
   examples; don't run untrusted third-party code through it.
 - **Static live-eval only.** MyST's executable/notebook features are intentionally
@@ -175,7 +187,7 @@ committed, so CI's `npm ci` had nothing to install from; and `astro.config.mjs`'
 ├── .github/workflows/deploy.yml  ← self-render → GitHub Pages (+ MDX compile gate)
 ├── tool/                         ← Kotlin Multiplatform transpiler (CLI + web + tests)
 └── site/                         ← Astro Starlight + MyST source + live-eval island
-    ├── myst/                     ← MyST source of truth
+    ├── myst/                     ← MyST source of truth (index.md, tool.md, myst.yml)
     ├── src/components/           ← CodeMirrorEval.astro + eval-worker.ts
     ├── src/styles/myst-shim.css  ← orphan-construct shim (Starlight tokens)
     └── astro.config.mjs

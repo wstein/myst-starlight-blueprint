@@ -4,6 +4,7 @@ project:
   description: A self-rendering blueprint and template.
   toc:
     - file: index.md
+    - file: tool.md
 site:
   # `myst build --site` always resolves and downloads a real site template —
   # there is no "skip the theme" option — even though we only consume the

@@ -12,7 +12,8 @@ myst:            ## Resolve MyST source to AST JSON (xrefs + numbering baked in)
 transpile:       ## AST JSON -> generated MDX in Starlight
 	java -jar tool/build/libs/*-jvm.jar \
 		--in site/myst/_build/site/content \
-		--out site/src/content/docs
+		--out site/src/content/docs \
+		--base /myst-starlight-blueprint
 
 site:            ## Build the Starlight site (this is also the MDX compile gate)
 	cd site && npm ci && npm run build

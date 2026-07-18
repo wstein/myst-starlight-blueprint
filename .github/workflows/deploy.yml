@@ -37,7 +37,8 @@ jobs:
         run: |
           java -jar tool/build/libs/*-jvm.jar \
             --in site/myst/_build/site/content \
-            --out site/src/content/docs
+            --out site/src/content/docs \
+            --base /myst-starlight-blueprint
 
       # --- 4. Build Starlight. `astro build` compiles every MDX file, so this
       #        step IS the MDX compile gate — invalid generated MDX fails here. ---

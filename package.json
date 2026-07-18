@@ -5,7 +5,7 @@
   "scripts": {
     "tool:build": "cd tool && gradle jvmTest jvmJar",
     "myst:build": "cd site/myst && myst build --site",
-    "transpile": "java -jar tool/build/libs/*-jvm.jar --in site/myst/_build/site/content --out site/src/content/docs",
+    "transpile": "java -jar tool/build/libs/*-jvm.jar --in site/myst/_build/site/content --out site/src/content/docs --base /myst-starlight-blueprint",
     "site:build": "cd site && npm run build",
     "pipeline": "npm run tool:build && npm run myst:build && npm run transpile && npm run site:build"
   }
