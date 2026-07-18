@@ -3,8 +3,8 @@
 
 pipeline: tool myst transpile site   ## MyST -> AST -> MDX -> Starlight site
 
-tool:            ## Build the KMP transpiler (JVM CLI jar). Run `cd tool && gradle wrapper` once for ./gradlew
-	cd tool && gradle jvmJar
+tool:            ## Test + build the KMP transpiler (JVM CLI jar). Run `cd tool && gradle wrapper` once for ./gradlew
+	cd tool && gradle jvmTest jvmJar
 
 myst:            ## Resolve MyST source to AST JSON (xrefs + numbering baked in)
 	cd site/myst && myst build --site

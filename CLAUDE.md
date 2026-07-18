@@ -31,7 +31,7 @@ Local pipeline requires JDK 21, Node 22, and `mystmd` (`npm install -g mystmd`).
 
 ```
 make pipeline     # full chain: tool -> myst -> transpile -> site
-make tool         # cd tool && gradle jvmJar   (builds the fat JVM CLI jar)
+make tool         # cd tool && gradle jvmTest jvmJar   (tests, then builds the fat JVM CLI jar)
 make myst         # cd site/myst && myst build --site   (resolve MyST -> AST JSON)
 make transpile    # java -jar tool/build/libs/*-jvm.jar --in <ast-json-dir> --out site/src/content/docs
 make site         # cd site && npm ci && npm run build   (also the MDX compile gate)
@@ -42,14 +42,22 @@ make clean        # rm generated .mdx, _build, dist, tool/build
 (`myst:build`, `transpile`, `site:build`).
 
 Kotlin tool, run from `tool/`:
-- `gradle jvmJar` — build the CLI fat jar (`tool/build/libs/*-jvm.jar`, main class
-  `blueprint.CliKt`)
+- `gradle jvmJar` — build the CLI fat jar (`tool/build/libs/*-jvm.jar`, bundles the
+  runtime classpath, main class `blueprint.CliKt`)
+- `gradle jvmTest` — run `commonTest` + `jvmMain`-specific tests on the JVM target
+  (this is what CI and `make tool` run before `jvmJar`)
 - `gradle jsBrowserProductionWebpack` (or equivalent JS target task) — build the
   browser-playground bundle from `jsMain`
-- `gradle test` — run `commonTest` (currently no test sources exist under
-  `tool/src/commonTest` — add tests there when adding logic to `commonMain`)
+- `gradle jsNodeTest` / `gradle jsBrowserTest` — run `commonTest` on the JS target
+  (`jsBrowserTest` needs a local Chrome install via Karma; not run in CI)
 - `gradle wrapper` — generate `./gradlew` (not currently checked in; the README
   assumes a system `gradle` is available)
+
+Test sources live under `tool/src/commonTest/kotlin/blueprint/` (unit tests for
+`MystNode`, `MdxEscaper`, `NodeMapping`, `MdxEmitter`, `Transpiler`) plus a
+`fixtures/` package holding a real `mystmd build --site` capture used to ground
+tests in the actual resolved-AST shape rather than a hand-guessed one. Add tests
+there when adding logic to `commonMain`.
 
 Astro site, run from `site/`:
 - `npm run dev` — local dev server
@@ -143,8 +151,6 @@ Key design points to preserve when touching this code:
 
 ## Known rough edges (per README's own caveats)
 
-- Versions in `tool/build.gradle.kts` / `site/package.json` are not CI-verified as
-  of the last README update — check before assuming they're current.
 - The exact resolved-AST output path (`site/myst/_build/site/content/`) depends on
   the installed `mystmd` version; adjust `--in` in `make transpile` /
   `npm run transpile` if it changes.
