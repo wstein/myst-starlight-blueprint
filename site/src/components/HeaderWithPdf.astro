@@ -22,11 +22,13 @@ const shouldRenderSearch =
 // alone can't distinguish real content pages from Astro's own special routes.
 const PAGES_WITH_PDF = new Set(['', 'tool']);
 
-// `Astro.locals.starlightRoute` is a newer Starlight API (doesn't exist in
-// the ^0.30.0 pinned here — grepped node_modules to confirm before assuming
-// it). In 0.30.x, Starlight passes route data as Astro.props instead: Header
-// receives it as {...Astro.props} per the installed component's own source.
-const routeId = (Astro.props as { id?: string }).id;
+// Starlight >=0.41 (needed for the Markdoc preset) exposes route data via
+// Astro.locals.starlightRoute — the older ^0.30.0 pin this repo started on
+// passed it as Astro.props instead (Header spread {...Astro.props} into its
+// children); the installed Header.astro no longer does that, so Astro.props
+// silently carries nothing on this version. Re-verified by grepping
+// node_modules again after the upgrade, not assumed to still be true.
+const routeId = Astro.locals.starlightRoute?.id;
 // Starlight's route id is '' for the homepage, not 'index' — matches this
 // site's own PDF export filenames (site/myst/index.md -> exports/index.pdf).
 const slug = routeId === '' ? 'index' : routeId;

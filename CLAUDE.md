@@ -227,11 +227,16 @@ step, frontmatter injection), not the conversion logic itself.
   reconstructs the header instead, importing the same sub-components
   (`SiteTitle`, `Search`, `SocialIcons`, `ThemeSelect`, `LanguageSelect`) Header
   itself uses. Two things to know before touching it:
-  - **Route data comes from `Astro.props`, not `Astro.locals.starlightRoute`.**
-    The latter is a newer Starlight API that doesn't exist in the `^0.30.0`
-    pinned here (grepped `node_modules` to confirm before assuming it) —
-    0.30.x passes route data as `Astro.props` instead, per the installed
-    `Header.astro`'s own source (`<SiteTitle {...Astro.props} />` etc).
+  - **Route data comes from `Astro.locals.starlightRoute`, which requires
+    Starlight >=0.41** (this repo is pinned there for the Markdoc preset).
+    On the `^0.30.0` this project started on, that API didn't exist yet and
+    `Header.astro` passed route data as `Astro.props` instead — this file
+    used that form first, and silently returned no PDF link on every page
+    after the Starlight upgrade until switched over (`Astro.props` doesn't
+    error, it's just empty, so nothing crashed — only manual inspection of
+    the built HTML caught it, same as the sidebar `autogenerate` bug earlier).
+    Re-verify this against `node_modules` again if bumping Starlight further,
+    rather than assuming either form is permanent.
   - **The PDF link uses an explicit page allowlist**, not "does a route id
     exist" — `404.astro` also has a route id (`"404"`, not `undefined`), so an
     existence check alone linked to a nonexistent `404.pdf`. The allowlist
@@ -259,7 +264,10 @@ step, frontmatter injection), not the conversion logic itself.
   keyed by platform name vs. an array of `{icon,label,href}`), and only
   `astro build` catches a mismatch — `astro check` and the Kotlin test suite
   don't touch `astro.config.mjs`. Re-run the full pipeline after bumping
-  anything under `site/`.
+  anything under `site/`. Currently pinned to `astro ^7.0.2` /
+  `@astrojs/starlight ^0.41.3` — a two-major-version jump from the original
+  `astro ^5.1.0` / `@astrojs/starlight ^0.30.0`, forced by
+  `@astrojs/starlight-markdoc`'s peer dependency on Starlight `>=0.41.0`.
 - `site/package-lock.json` is committed on purpose — CI's `site` step runs
   `npm ci`, which requires one; don't gitignore it.
 - `make transpile`'s `--base` must equal `site/astro.config.mjs`'s `BASE` —

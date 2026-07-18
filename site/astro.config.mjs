@@ -13,9 +13,11 @@ export default defineConfig({
       title: 'MyST → Starlight Blueprint',
       description: 'A self-rendering blueprint: MyST source, KMP transpiler, Starlight output.',
       customCss: ['./src/styles/myst-shim.css'],
-      // @astrojs/starlight ^0.30 takes `social` as an object keyed by platform
-      // name (the array-of-{icon,label,href} shape isn't until Starlight 0.33).
-      social: { github: 'https://github.com/wstein/myst-starlight-blueprint' },
+      // Starlight >=0.33 takes `social` as an array of {icon,label,href} —
+      // the object-keyed-by-platform shape (^0.30) was retired; this pin
+      // moved past 0.33 for the official Markdoc preset (needs Starlight
+      // >=0.41), so the array shape is required now, not optional.
+      social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/wstein/myst-starlight-blueprint' }],
       // Per-page PDF download link, not a single sidebar entry: each page has
       // its own PDF (index.pdf, tool.pdf, ...), so the link has to change with
       // the page. See src/components/HeaderWithPdf.astro.

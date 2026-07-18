@@ -191,7 +191,13 @@ committed, so CI's `npm ci` had nothing to install from; and `astro.config.mjs`'
   changed the shape of the `social` config option between 0.30 and 0.33 — a
   caret range and the config calling it are coupled, and only `astro build`
   (not `astro check`, not the Kotlin test suite) catches a mismatch. Re-run the
-  full pipeline after bumping anything in `site/package.json`.
+  full pipeline after bumping anything in `site/package.json`. This repo hit
+  the same wall a second time bumping to `astro ^7.0.2` /
+  `@astrojs/starlight ^0.41.3` (needed for the official Markdoc preset,
+  itself pinned to `@astrojs/starlight >=0.41.0` as a peer dependency) — the
+  `social` array-shape fix from the first bump wasn't itself broken again, but
+  don't assume a caret range survives an upgrade untested just because it did
+  once before.
 - **`--base` is a second copy of `astro.config.mjs`'s `BASE`, not derived from
   it.** mystmd resolves internal links/xrefs to root-relative paths with no
   knowledge of Astro's subpath deployment, so the CLI's `--base` flag re-prefixes
