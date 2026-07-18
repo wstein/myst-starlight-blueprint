@@ -193,8 +193,12 @@ a CLI entry point, a merge step) is unscoped, deliberately deferred work — see
   own deployment (`wstein.github.io/myst-starlight-blueprint`) — anyone forking
   this as a template must repoint all three to their own GitHub Pages URL/repo.
 - Sidebar entries in `astro.config.mjs` are listed explicitly (`items: ['index',
-  'tool']`), mirroring `site/myst/myst.yml`'s `toc` order — add new pages to
-  both. **Not** `autogenerate`: Starlight's directory-match against root-level
+  'tool', {label, link}]`), mirroring `site/myst/myst.yml`'s `toc` order — add
+  new pages to both. The PDF link lives in the sidebar itself (not just as a
+  paragraph in `index.md`) specifically so it's reachable from every page, not
+  only the homepage — Starlight's sidebar `link` values are base-prefixed
+  automatically, unlike a raw href written directly in MyST/MDX content.
+  **Not** `autogenerate`: Starlight's directory-match against root-level
   pages (`directory: '.'` or `''`) matched nothing, so the sidebar silently
   rendered an empty group while both pages remained directly reachable by URL —
   reachable, but invisible in nav. Caught only by inspecting the built HTML's

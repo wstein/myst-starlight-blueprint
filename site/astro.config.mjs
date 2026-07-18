@@ -21,7 +21,15 @@ export default defineConfig({
         // first but Starlight's directory-match against root-level pages
         // (`directory: '.'` or `''`) matches nothing, silently rendering an
         // empty sidebar group — explicit entries sidestep that entirely.
-        { label: 'Start here', items: ['index', 'tool'] },
+        //
+        // The PDF link lives here (not just as a paragraph in index.md) so
+        // it's reachable from every page, not only the homepage — Starlight
+        // sidebar `link` values are base-prefixed automatically, unlike a raw
+        // href written directly in MyST/MDX content.
+        {
+          label: 'Start here',
+          items: ['index', 'tool', { label: 'Download as PDF', link: '/blueprint.pdf' }],
+        },
       ],
     }),
   ],
