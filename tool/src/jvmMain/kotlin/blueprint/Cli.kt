@@ -9,6 +9,7 @@ import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
+import org.jsoup.Jsoup
 import java.io.File
 
 /**
@@ -65,9 +66,16 @@ class Dokka2Typst : CliktCommand(name = "dokka2typst") {
     }
 }
 
-/** Dokka-generated HTML -> MDX (see blueprint.dokka.Html2Mdx). */
+/**
+ * Dokka-generated HTML -> MDX (see blueprint.dokka.Html2Mdx), plus the
+ * Starlight frontmatter Html2Mdx deliberately doesn't add itself (it's a
+ * body-only converter — see its class KDoc). `--in` should point at the
+ * generated site's per-symbol subtree (e.g. tool/build/dokka/html/myst2mdx),
+ * not the whole `dokka/html` output — that also contains index.html and
+ * navigation.html, Dokka's own site chrome, not real content pages.
+ */
 class Dokka2Mdx : CliktCommand(name = "dokka2mdx") {
-    val input by option("--in", help = "Dir of Dokka-generated HTML (e.g. tool/build/dokka/html)").required()
+    val input by option("--in", help = "Dir of Dokka-generated HTML (e.g. tool/build/dokka/html/myst2mdx)").required()
     val output by option("--out", help = "Output dir for generated .mdx files").required()
 
     override fun run() {
@@ -76,12 +84,45 @@ class Dokka2Mdx : CliktCommand(name = "dokka2mdx") {
         var count = 0
         inDir.walkTopDown().filter { it.isFile && it.extension == "html" }.forEach { htmlFile ->
             val rel = htmlFile.relativeTo(inDir).path.removeSuffix(".html")
-            File(outDir, "$rel.mdx").apply { parentFile.mkdirs() }.writeText(Html2Mdx.convert(htmlFile.readText()))
+            val fallbackTitle = rel.substringAfterLast('/')
+            // Dokka names top-level package dirs after the FQN ("blueprint.ast"),
+            // but Astro/Starlight's route slugifier silently drops '.' from path
+            // segments (it treats the tail as a file extension, same rule that
+            // strips ".mdx" itself) — "blueprint.ast" and "blueprint.dokka" both
+            // collapsed onto unrelated flat slugs ("blueprintast", "blueprintdokka")
+            // with no build warning. Only found by diffing generated dist/ dir
+            // names against the source tree. Hyphenate instead so the slug
+            // survives intact.
+            val slug = rel.replace('.', '-')
+            File(outDir, "$slug.mdx").apply { parentFile.mkdirs() }
+                .writeText(renderDokkaMdxPage(htmlFile.readText(), fallbackTitle))
             count++
         }
         echo("Converted $count Dokka page(s) -> $output (MDX)")
     }
 }
+
+/**
+ * `html` -> a full Starlight MDX file: frontmatter (title from Dokka's own
+ * `<title>` tag, falling back to [fallbackTitle] if blank) + body. Extracted
+ * from [Dokka2Mdx.run] so the frontmatter/duplicate-heading logic is testable
+ * without file I/O.
+ */
+internal fun renderDokkaMdxPage(html: String, fallbackTitle: String): String {
+    val title = Jsoup.parse(html).title().ifBlank { fallbackTitle }
+    val frontmatter = "---\ntitle: ${yamlString(title)}\n---\n\n"
+    // Starlight already renders frontmatter `title` as the page's H1 (same
+    // bug class as the main site's index.md/tool.md, caught earlier — see
+    // CLAUDE.md). Dokka's own "cover" <h1> becomes a duplicate leading
+    // "# <title>" here; strip it if it's an exact match rather than trusting
+    // every page not to have one.
+    val body = Html2Mdx.convert(html).removePrefix("# $title\n\n")
+    return frontmatter + body
+}
+
+/** Same minimal YAML-scalar quoting Transpiler.kt uses for frontmatter values. */
+private fun yamlString(s: String): String =
+    if (s.any { it in ":#\"'{}[]" }) "\"" + s.replace("\"", "\\\"") + "\"" else s
 
 fun main(args: Array<String>) = Myst2Mdx()
     .subcommands(Transpile(), Dokka2Typst(), Dokka2Mdx())

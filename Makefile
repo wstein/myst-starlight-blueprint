@@ -1,7 +1,7 @@
 # One command runs the whole self-rendering pipeline locally.
-.PHONY: pipeline tool myst transpile pdf site clean
+.PHONY: pipeline tool myst transpile dokka api pdf site clean
 
-pipeline: tool myst transpile pdf site   ## MyST -> AST -> MDX -> PDF -> Starlight site
+pipeline: tool myst transpile dokka api pdf site   ## MyST -> AST -> MDX -> KDoc -> PDF -> Starlight site
 
 tool:            ## Test + build the KMP transpiler (JVM CLI jar). Run `cd tool && gradle wrapper` once for ./gradlew
 	cd tool && gradle jvmTest jvmJar
@@ -14,6 +14,14 @@ transpile:       ## AST JSON -> generated MDX in Starlight
 		--in site/myst/_build/site/content \
 		--out site/src/content/docs \
 		--base /myst-starlight-blueprint
+
+dokka:           ## Generate Dokka HTML from the tool's own KDoc comments
+	cd tool && gradle dokkaGenerate
+
+api:             ## Dokka HTML -> generated MDX under Starlight's api/ (sidebar: astro.config.mjs)
+	java -jar tool/build/libs/*-jvm.jar dokka2mdx \
+		--in tool/build/dokka/html/myst2mdx \
+		--out site/src/content/docs/api
 
 pdf:             ## Typst-export each MyST page to its own PDF in site/public/
 	# One file per invocation, not `myst build --typst index.md tool.md`: a
@@ -29,4 +37,4 @@ site:            ## Build the Starlight site (this is also the MDX compile gate)
 	cd site && npm ci && npm run build
 
 clean:
-	rm -rf site/src/content/docs/*.mdx site/myst/_build site/myst/exports site/public site/dist tool/build
+	rm -rf site/src/content/docs/*.mdx site/src/content/docs/api site/myst/_build site/myst/exports site/public site/dist tool/build

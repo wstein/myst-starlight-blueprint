@@ -40,7 +40,18 @@ jobs:
             --out site/src/content/docs \
             --base /myst-starlight-blueprint
 
-      # --- 4. Export each MyST page -> its own PDF (Typst, no LaTeX needed).
+      # --- 4. Generate KDoc reference from the tool's own doc comments and
+      #        transpile it into Starlight's api/ (autogenerate sidebar group,
+      #        see astro.config.mjs). ---
+      - name: Generate KDoc reference
+        run: |
+          cd tool && gradle dokkaGenerate --no-daemon
+          cd ..
+          java -jar tool/build/libs/*-jvm.jar dokka2mdx \
+            --in tool/build/dokka/html/myst2mdx \
+            --out site/src/content/docs/api
+
+      # --- 5. Export each MyST page -> its own PDF (Typst, no LaTeX needed).
       #        One PDF per page, not merged: the topbar's download link is
       #        per-document. Must run before the site build below, since Astro
       #        copies site/public/ verbatim into site/dist/. ---
@@ -58,7 +69,7 @@ jobs:
           cp exports/blueprint.pdf ../public/blueprint.pdf
           cp exports/tool.pdf ../public/tool.pdf
 
-      # --- 5. Build Starlight. `astro build` compiles every MDX file, so this
+      # --- 6. Build Starlight. `astro build` compiles every MDX file, so this
       #        step IS the MDX compile gate — invalid generated MDX fails here. ---
       - name: Build site (also the MDX compile gate)
         run: cd site && npm ci && npm run build

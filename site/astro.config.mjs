@@ -28,6 +28,13 @@ export default defineConfig({
         // (`directory: '.'` or `''`) matches nothing, silently rendering an
         // empty sidebar group — explicit entries sidestep that entirely.
         { label: 'Start here', items: ['index', 'tool'] },
+        // Unlike the root-level case above, `api/` is a real nested directory
+        // so `autogenerate` does match here — verified by inspecting the built
+        // sidebar HTML, not assumed from the root-level failure above.
+        // Starlight >=0.39 removed the `{ label, autogenerate }` shorthand
+        // this repo used pre-upgrade; `autogenerate` now has to be nested
+        // inside `items` (caught by the build itself, not a doc read).
+        { label: 'API reference', items: [{ autogenerate: { directory: 'api' } }] },
       ],
     }),
   ],
