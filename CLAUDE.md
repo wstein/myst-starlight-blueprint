@@ -104,7 +104,8 @@ tool/src/
 ├── jvmMain/…/Cli.kt             JVM target: clikt CLI, walks a dir of AST JSON files,
 │                                 writes .mdx (this is what CI/make invoke)
 └── jsMain/…/WebApi.kt           JS target: @JsExport'd transpileToMdx(), the exact
-                                  same Transpiler core, used by the browser playground
+                                  same Transpiler core — exported, but no browser UI
+                                  consumes it yet (see rough edges below)
 ```
 
 `Transpiler.transpile(astJson, sourcePath)` is the single entry point both targets
@@ -199,6 +200,14 @@ Key design points to preserve when touching this code:
   for trusted docs examples, not for untrusted third-party code.
 - Live eval is static-output-only; MyST's executable/notebook features are
   intentionally out of scope.
+- **`WebApi.kt`'s browser playground is a doc-comment aspiration, not a built
+  feature.** Its own KDoc says "the docs site can show 'paste MyST AST -> get
+  MDX' live," but no component in `site/` calls `transpileToMdx()`, and
+  `gradle jsBrowserProductionWebpack` has never run in CI or `make pipeline` —
+  only `jvmTest`/`jvmJar` are wired in anywhere. README and `tool.md`
+  previously repeated the comment's claim as fact; both now describe the JS
+  target as an exported, tested API rather than a shipped UI. Building the
+  actual playground is unscoped future work, not done here.
 - **mystmd's project-level "combined book" PDF export is unreliable — don't use
   it.** A single `exports:` entry in `myst.yml` referencing the whole `toc`
   looks like the natural way to get one multi-page PDF, but against this repo's

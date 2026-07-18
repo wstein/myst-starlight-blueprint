@@ -63,9 +63,11 @@ the actual correctness gate; the escaper's only job is to make that gate pass.
 
 The transpiler's logic lives once, in a `commonMain` Kotlin source set, and
 compiles to two targets: a JVM CLI that walks a directory of AST JSON files
-(what built this page), and a JS bundle exported for a browser playground.
-Same `transpile()` entry point, same behavior, by construction — not by
-keeping two implementations in sync by hand.
+(what built this page), and a `@JsExport`'d `transpileToMdx()` function for the
+JS target — the same `transpile()` entry point, same behavior, callable from
+JavaScript, by construction rather than a second implementation kept in sync
+by hand. No browser UI consumes it yet; today it's a proven, exported API
+surface, not a shipped playground.
 
 ## Admonitions, collapsed
 

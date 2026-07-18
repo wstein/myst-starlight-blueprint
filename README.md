@@ -47,7 +47,7 @@ is gitignored on purpose: it is output, not source.
 | Structured source | **mystmd** (standalone, not Sphinx) | Semantic authoring; emits a resolved AST as JSON |
 | Integration model | **Transpile to MDX**, don't inject HTML | MDX pages become *native* Starlight pages → shared theme, topbar, search, sidebar for free |
 | Emit target | **MDX** (not Markdoc) | Human-reviewable output; escaping is solved, not hoped away |
-| Tool language | **Kotlin Multiplatform** | One `commonMain` core → JVM **CLI** + JS **web**, from a single codebase |
+| Tool language | **Kotlin Multiplatform** | One `commonMain` core → JVM **CLI** + JS **export**, from a single codebase |
 | Live editor | **CodeMirror 6, vanilla** | Interactive island with **no React**, per the framework decision |
 | Live eval | **Web Worker** | Runs example JS off the main thread, no DOM access |
 
@@ -68,15 +68,17 @@ tool/src/
 │   ├── emit/MdxEmitter.kt       native-first emitter (→ <Aside>, Expressive Code, links)
 │   └── Transpiler.kt            frontmatter + imports + provenance banner
 ├── jvmMain/…/Cli.kt             JVM target → the CLI used in CI
-├── jsMain/…/WebApi.kt           JS target → the browser playground (@JsExport)
+├── jsMain/…/WebApi.kt           JS target → transpileToMdx(), exported (@JsExport)
 └── commonTest/…/blueprint/      unit tests for the shared core, incl. a fixtures/
                                  package with a real mystmd AST capture — run via
                                  `gradle jvmTest`, wired into CI before `jvmJar`
 ```
 
 The same `Transpiler.transpile(...)` runs in CI (a JVM jar walking JSON files)
-and in the browser (a JS function behind a live playground) — "shared code for
-CLI and web" satisfied by construction, not copy-paste.
+and is exported for JS (`transpileToMdx()`, `@JsExport`) — "shared code for
+CLI and web" satisfied by construction, not copy-paste. No browser UI
+consumes the JS export yet; it's a proven API surface, not a shipped
+playground (see [Honest caveats](#honest-caveats)).
 
 **Escaping is retired, not risked.** Every character is routed through one of four
 channels: prose is neutralised, code fences pass through verbatim, attributes are
@@ -229,6 +231,13 @@ committed, so CI's `npm ci` had nothing to install from; and `astro.config.mjs`'
   out of scope; this path renders static output by design.
 - **Starlight inner aside markup.** The emitter targets `<Aside>`; if you ever
   bypass it and hand-write aside classes, match Starlight's rendered structure.
+- **The JS target's browser playground is unbuilt.** `WebApi.kt`'s own doc
+  comment describes it — "the docs site can show 'paste MyST AST -> get MDX'
+  live" — but no component consumes `transpileToMdx()` anywhere in `site/`, and
+  `gradle jsBrowserProductionWebpack` has never run in CI or `make pipeline`.
+  Earlier drafts of this README and `tool.md` stated it as built; both now
+  describe what's actually shipped (a proven, exported JS API) rather than the
+  aspiration in the source comment that inspired them.
 
 ## Suggested repo topics
 
