@@ -11,7 +11,7 @@ import java.io.File
  * CLI target. Same shared core, wrapped with file IO + arg parsing.
  * Walks mystmd's resolved-AST JSON tree and mirrors it as .mdx into Starlight.
  */
-class Transpile : CliktCommand(name = "myst-transpile") {
+class Transpile : CliktCommand(name = "myst2mdx") {
     val input by option("--in", help = "Dir of mystmd resolved-AST JSON").required()
     val output by option("--out", help = "Starlight src/content/docs dir").required()
     val base by option(

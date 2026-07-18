@@ -27,7 +27,7 @@ class TranspilerTest {
         val mdx = Transpiler.transpile(ast, sourcePath = "myst/hello.md")
 
         assertTrue(mdx.startsWith("---\ntitle: Hello\ndescription: A page\n---\n"))
-        assertTrue(mdx.contains("GENERATED from myst/hello.md by myst-mdx-transpiler"))
+        assertTrue(mdx.contains("GENERATED from myst/hello.md by myst2mdx"))
         assertTrue(mdx.contains("# Hello"))
         assertTrue(mdx.contains("hello world"))
     }
@@ -78,7 +78,7 @@ class TranspilerTest {
             sourcePath = "myst/empty.md"
         )
         assertEquals(
-            "---\ntitle: empty\n---\n\n{/* GENERATED from myst/empty.md by myst-mdx-transpiler — do not edit */}\n\n\n",
+            "---\ntitle: empty\n---\n\n{/* GENERATED from myst/empty.md by myst2mdx — do not edit */}\n\n\n",
             mdx
         )
     }

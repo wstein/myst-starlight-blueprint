@@ -31,7 +31,7 @@ object Transpiler {
             append("---\n")
         }
 
-        val provenance = "{/* GENERATED from $sourcePath by myst-mdx-transpiler — do not edit */}\n"
+        val provenance = "{/* GENERATED from $sourcePath by myst2mdx — do not edit */}\n"
         val importBlock = if (emitter.imports.isEmpty()) ""
                           else emitter.imports.joinToString("\n") + "\n\n"
 
