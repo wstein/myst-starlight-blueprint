@@ -166,7 +166,12 @@ pages of this project's own KDoc, not just hand-written test HTML — see
   inter-element whitespace is preserved rather than stripped (upstream's own
   comment flags this as an unresolved "Consider" item — its unconditional
   `.trim()` on every text node drops real content, e.g.
-  `<b>bold</b> and <i>em</i>` -> `boldand em`).
+  `<b>bold</b> and <i>em</i>` -> `boldand em`). One addition beyond the port:
+  a link to another `.pdf` gets a Typst `#footnote[<url>]` spelling out the
+  raw URL alongside the normal `#link`, since a PDF reader can't always click
+  through the way a web link works — verified with a real `typst compile`,
+  not just the emitted source string (footnote marker + numbered URL at the
+  page bottom, standard Typst footnote rendering).
 - `Html2Mdx` — written fresh (not a port) for the same job, targeting
   MDX/GFM instead of Typst. Reuses this repo's own `MdxEscaper` (prose + fence
   channels) rather than a second escaping implementation, so output escapes

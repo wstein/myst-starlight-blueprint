@@ -60,6 +60,30 @@ class Html2TypstTest {
     }
 
     @Test
+    fun pdfLinkGetsAFootnoteSpellingOutTheUrl() {
+        assertEquals(
+            """#link("/index.pdf")[Download]#footnote[/index.pdf]""",
+            convert("""<a href="/index.pdf">Download</a>""")
+        )
+    }
+
+    @Test
+    fun nonPdfLinkGetsNoFootnote() {
+        assertEquals(
+            """#link("/tool")[The tool]""",
+            convert("""<a href="/tool">The tool</a>""")
+        )
+    }
+
+    @Test
+    fun pdfLinkWithQueryOrFragmentStillGetsAFootnote() {
+        assertEquals(
+            """#link("/index.pdf?x=1")[Download]#footnote[/index.pdf?x=1]""",
+            convert("""<a href="/index.pdf?x=1">Download</a>""")
+        )
+    }
+
+    @Test
     fun blockquoteUsesTypstQuoteFunction() {
         val out = convert("<blockquote>said something</blockquote>")
         assertTrue(out.contains("#quote(block: true)["))

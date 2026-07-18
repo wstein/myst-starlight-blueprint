@@ -164,6 +164,14 @@ object Html2Typst {
                     ctx.output.append("#link(\"").append(href).append("\")[")
                     walkDescendants(node, ctx, tag)
                     ctx.output.append(']')
+                    // A PDF reader can't always click through the way a web
+                    // link works, so spell the URL out as a footnote rather
+                    // than relying on the link text alone — only for links
+                    // to another PDF, not every link (those still work fine
+                    // as plain `#link`s for a reader following along on paper).
+                    if (href.substringBefore('#').substringBefore('?').endsWith(".pdf")) {
+                        ctx.output.append("#footnote[").append(href).append(']')
+                    }
                 } else {
                     walkDescendants(node, ctx, tag)
                 }
