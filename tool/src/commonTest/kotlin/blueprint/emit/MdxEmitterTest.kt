@@ -54,6 +54,50 @@ class MdxEmitterTest {
     }
 
     @Test
+    fun rootRelativeLinkIsUnprefixedWhenNoBasePathGiven() {
+        val json = """{"type":"paragraph","children":[
+            {"type":"link","url":"/tool","children":[{"type":"text","value":"x"}]}
+        ]}"""
+        assertEquals("[x](/tool)\n\n", emit(json))
+    }
+
+    @Test
+    fun rootRelativeLinkIsPrefixedWithBasePath() {
+        val emitter = MdxEmitter(basePath = "/myst-starlight-blueprint")
+        val json = """{"type":"paragraph","children":[
+            {"type":"link","url":"/tool","children":[{"type":"text","value":"x"}]}
+        ]}"""
+        assertEquals(
+            "[x](/myst-starlight-blueprint/tool)\n\n",
+            emitter.emit(MystNode.parse(json))
+        )
+    }
+
+    @Test
+    fun externalLinkIsNeverPrefixedWithBasePath() {
+        val emitter = MdxEmitter(basePath = "/myst-starlight-blueprint")
+        val json = """{"type":"paragraph","children":[
+            {"type":"link","url":"https://x.test","children":[{"type":"text","value":"x"}]}
+        ]}"""
+        assertEquals(
+            "[x](https://x.test)\n\n",
+            emitter.emit(MystNode.parse(json))
+        )
+    }
+
+    @Test
+    fun fragmentOnlyCrossReferenceIsNeverPrefixedWithBasePath() {
+        val emitter = MdxEmitter(basePath = "/myst-starlight-blueprint")
+        val json = """{"type":"paragraph","children":[
+            {"type":"crossReference","html_id":"section","children":[{"type":"text","value":"x"}]}
+        ]}"""
+        assertEquals(
+            "[x](#section)\n\n",
+            emitter.emit(MystNode.parse(json))
+        )
+    }
+
+    @Test
     fun codeBlockUsesFenceWithLanguage() {
         assertEquals(
             "```kotlin\nval x = 1\n```\n\n",

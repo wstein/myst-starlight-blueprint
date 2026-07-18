@@ -9,10 +9,22 @@ import blueprint.escape.MdxEscaper.HtmlFallback
  * hand-written docs for the 90% that maps, and only the rare orphan constructs
  * land in the (styled-by-shim) fallback branch.
  */
-class MdxEmitter {
+class MdxEmitter(private val basePath: String = "") {
 
     /** Set when we emit an <Aside> or <CodeMirrorEval>, so we can add imports. */
     val imports = linkedSetOf<String>()
+
+    /**
+     * mystmd resolves internal links/images/xrefs to root-relative paths (e.g.
+     * "/tool") with no knowledge of Astro's `base` config. Prefix root-relative
+     * URLs with `basePath` so they still resolve once the site is served under a
+     * subpath; external URLs and same-page anchors (`#id`) pass through as-is.
+     */
+    private fun resolveHref(url: String?): String? {
+        if (url == null || basePath.isEmpty()) return url
+        if (!url.startsWith("/") || url.startsWith("//")) return url
+        return basePath.trimEnd('/') + url
+    }
 
     fun emit(node: MystNode): String = when (node.type) {
         // mystmd wraps each top-level flow section in a "block" node; it carries
@@ -42,10 +54,10 @@ class MdxEmitter {
             "emphasis"      -> "*" + inline(child) + "*"
             "inlineCode"    -> { val f = MdxEscaper.fence(child.value ?: ""); f + (child.value ?: "") + f }
             "break"         -> "  \n"
-            "link"          -> "[" + inline(child) + "](" + (child.str("url") ?: "#") + ")"
+            "link"          -> "[" + inline(child) + "](" + (resolveHref(child.str("url")) ?: "#") + ")"
             "crossReference"-> xref(child)
             "image"         -> "![" + MdxEscaper.attr(child.str("alt") ?: "") + "](" +
-                               (child.str("url") ?: "") + ")"
+                               (resolveHref(child.str("url")) ?: "") + ")"
             "paragraph"     -> inline(child)
             else            -> if (NodeMapping.isNative(child.type)) inline(child)
                                else HtmlFallback.render(child)
@@ -55,7 +67,7 @@ class MdxEmitter {
     /** Cross-references are baked from the RESOLVED AST -> plain links, no runtime resolver. */
     private fun xref(node: MystNode): String {
         val text = if (node.children.isNotEmpty()) inline(node) else (node.value ?: "ref")
-        val url = node.str("url") ?: node.str("html_id")?.let { "#$it" }
+        val url = resolveHref(node.str("url")) ?: node.str("html_id")?.let { "#$it" }
         return if (url != null) "[$text]($url)" else HtmlFallback.render(node)
     }
 

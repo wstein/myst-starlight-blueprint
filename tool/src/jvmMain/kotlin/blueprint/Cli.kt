@@ -2,6 +2,7 @@ package blueprint
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.main
+import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import java.io.File
@@ -13,6 +14,12 @@ import java.io.File
 class Transpile : CliktCommand(name = "myst-transpile") {
     val input by option("--in", help = "Dir of mystmd resolved-AST JSON").required()
     val output by option("--out", help = "Starlight src/content/docs dir").required()
+    val base by option(
+        "--base",
+        help = "Astro `base` config (e.g. /my-repo) — prefixed onto mystmd's " +
+            "root-relative internal links/images/xrefs so they still resolve " +
+            "once the site is served under a subpath. Must match astro.config.mjs."
+    ).default("")
 
     override fun run() {
         val inDir = File(input)
@@ -20,7 +27,7 @@ class Transpile : CliktCommand(name = "myst-transpile") {
         var count = 0
         inDir.walkTopDown().filter { it.isFile && it.extension == "json" }.forEach { json ->
             val rel = json.relativeTo(inDir).path.removeSuffix(".json")
-            val mdx = Transpiler.transpile(json.readText(), sourcePath = "myst/$rel.md")
+            val mdx = Transpiler.transpile(json.readText(), sourcePath = "myst/$rel.md", basePath = base)
             File(outDir, "$rel.mdx").apply { parentFile.mkdirs() }.writeText(mdx)
             count++
         }

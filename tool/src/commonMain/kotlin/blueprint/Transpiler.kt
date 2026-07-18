@@ -11,11 +11,11 @@ import blueprint.emit.MdxEmitter
  */
 object Transpiler {
 
-    fun transpile(astJson: String, sourcePath: String): String {
+    fun transpile(astJson: String, sourcePath: String, basePath: String = ""): String {
         val doc = MystNode.parse(astJson)
         val mdast = doc.child("mdast")
             ?: error("Malformed resolved AST for $sourcePath: missing \"mdast\" root")
-        val emitter = MdxEmitter()
+        val emitter = MdxEmitter(basePath)
         val body = emitter.emit(mdast)
 
         val title = doc.frontmatterStr("title")
