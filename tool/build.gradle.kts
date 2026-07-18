@@ -3,6 +3,11 @@ import org.gradle.api.tasks.bundling.Jar
 plugins {
     kotlin("multiplatform") version "2.0.20"
     kotlin("plugin.serialization") version "2.0.20"
+    // HTML output only, not `dokka-gfm` — Dokka's own README calls its
+    // Markdown/GFM format "currently in Alpha," HTML is the stable default.
+    // Html2Typst/Html2Mdx convert FROM this HTML; Dokka never emits Typst/MDX
+    // itself.
+    id("org.jetbrains.dokka") version "2.2.0"
 }
 
 repositories { mavenCentral() }
@@ -57,4 +62,15 @@ tasks.named<Jar>("jvmJar") {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     manifest { attributes["Main-Class"] = "blueprint.CliKt" }
     from(configurations["jvmRuntimeClasspath"].map { if (it.isDirectory) it else zipTree(it) })
+}
+
+// `gradle dokkaGenerate` -> build/dokka/html/ — the real HTML that Html2Typst/
+// Html2Mdx are exercised against (see blueprint.dokka's tests and
+// tool/dokka-html-fixture/ below). Not run by `make pipeline` or CI; this is
+// the converter layer's own input, not part of the MyST->MDX site build.
+dokka {
+    dokkaPublications.named("html") {
+        moduleName.set("myst2mdx")
+        outputDirectory.set(layout.buildDirectory.dir("dokka/html"))
+    }
 }

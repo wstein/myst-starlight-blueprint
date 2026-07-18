@@ -19,14 +19,34 @@ import org.jsoup.nodes.TextNode
  *
  * Not ported (upstream doesn't implement them either): `colspan`/`rowspan` on
  * table cells are ignored — each cell renders once, in place, uncombined.
+ *
+ * Found only by running this against real `gradle dokkaGenerate` output (see
+ * RealDokkaFixtureTest), not visible from hand-written test HTML: Dokka's
+ * per-member "copy link" affordance renders as visible text ("Link copied to
+ * clipboard") inside `class="anchor-wrapper"`, which would otherwise leak into
+ * the converted prose as if it were documentation content. Skipped entirely.
  */
 object Html2Typst {
 
+    /** Dokka UI chrome with no documentation content — skipped entirely, not walked. */
+    private val DOKKA_CHROME_CLASSES = setOf("anchor-wrapper", "breadcrumbs")
+
     fun convert(html: String): String {
         val doc = Jsoup.parse(html)
+        // Dokka wraps every page's real content in id="content" (verified
+        // across classlike and member page types against real dokkaGenerate
+        // output) — everything outside it is site chrome: top nav, sidebar,
+        // search modal. Fall back to <body> for non-Dokka HTML (tests, or any
+        // other source), so this stays a general converter, not Dokka-only.
+        val root = doc.getElementById("content") ?: doc.body()
         val ctx = Context()
-        walkDescendants(doc.body(), ctx, "body")
-        return ctx.output.toString().trim()
+        walkDescendants(root, ctx, root.tagName().lowercase())
+        // Dokka's deeply nested chrome divs each contribute their own "\n\n",
+        // compounding into runs of 4+ blank lines — harmless to a Typst reader
+        // (any blank line is a paragraph break) but noisy in the source. Only
+        // visible with real nested markup; hand-written test HTML is too flat
+        // to produce it.
+        return ctx.output.toString().trim().replace(Regex("\n{3,}"), "\n\n")
     }
 
     private class Context {
@@ -78,6 +98,8 @@ object Html2Typst {
     }
 
     private fun walkElement(node: Element, ctx: Context) {
+        if (node.classNames().any { it in DOKKA_CHROME_CLASSES }) return // see class doc
+
         when (val tag = node.tagName().lowercase()) {
             "sub" -> inlineWrap(node, ctx, "#sub[", "]")
             "sup" -> inlineWrap(node, ctx, "#super[", "]")

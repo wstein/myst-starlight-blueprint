@@ -20,14 +20,27 @@ import org.jsoup.nodes.TextNode
  * with Starlight frontmatter (at minimum `title`) prepended separately — this
  * doesn't go through mystmd/myst2mdx at all, since Dokka's HTML has no MyST
  * constructs for that pipeline to resolve.
+ *
+ * See [Html2Typst]'s KDoc for the `anchor-wrapper`/"Link copied to clipboard"
+ * finding — same fix applies here, same reason (only found via real
+ * `dokkaGenerate` output, see RealDokkaFixtureTest).
  */
 object Html2Mdx {
 
+    /** Dokka UI chrome with no documentation content — skipped entirely, not walked. */
+    private val DOKKA_CHROME_CLASSES = setOf("anchor-wrapper", "breadcrumbs")
+
     fun convert(html: String): String {
         val doc = Jsoup.parse(html)
+        // See Html2Typst.convert's matching comment: Dokka wraps real content
+        // in id="content" across every page type; everything else is chrome.
+        val root = doc.getElementById("content") ?: doc.body()
         val ctx = Context()
-        walkDescendants(doc.body(), ctx, "body")
-        return ctx.output.toString().trim()
+        walkDescendants(root, ctx, root.tagName().lowercase())
+        // See Html2Typst.convert's matching comment: collapses blank-line runs
+        // from Dokka's deeply nested chrome divs; harmless (Markdown/MDX also
+        // treat any blank line as a paragraph break), just noisy uncollapsed.
+        return ctx.output.toString().trim().replace(Regex("\n{3,}"), "\n\n")
     }
 
     private class Context {
@@ -63,6 +76,8 @@ object Html2Mdx {
     }
 
     private fun walkElement(node: Element, ctx: Context) {
+        if (node.classNames().any { it in DOKKA_CHROME_CLASSES }) return // see class doc
+
         when (val tag = node.tagName().lowercase()) {
             "b", "strong" -> wrap(node, ctx, "**", "**")
             "i", "em" -> wrap(node, ctx, "*", "*")
