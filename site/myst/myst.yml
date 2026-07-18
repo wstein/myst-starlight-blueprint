@@ -1,0 +1,8 @@
+version: 1
+project:
+  title: MyST → Starlight Blueprint
+  description: A self-rendering blueprint and template.
+  toc:
+    - file: index.md
+site:
+  template: none   # We do NOT use MyST's React theme; the transpiler feeds Starlight.

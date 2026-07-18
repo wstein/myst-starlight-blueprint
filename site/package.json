@@ -1,0 +1,20 @@
+{
+  "name": "blueprint-site",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check"
+  },
+  "dependencies": {
+    "@astrojs/mdx": "^4.0.0",
+    "@astrojs/starlight": "^0.30.0",
+    "astro": "^5.1.0",
+    "codemirror": "^6.0.1",
+    "@codemirror/lang-javascript": "^6.2.2",
+    "@codemirror/state": "^6.4.1",
+    "@codemirror/view": "^6.34.1"
+  }
+}

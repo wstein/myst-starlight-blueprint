@@ -1,0 +1,9 @@
+# Generated MDX is a BUILD ARTIFACT — never edited, never committed.
+site/src/content/docs/**/*.mdx
+site/myst/_build/
+# Standard
+node_modules/
+site/dist/
+.astro/
+tool/build/
+.gradle/

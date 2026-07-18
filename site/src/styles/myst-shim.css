@@ -1,0 +1,35 @@
+/* myst-shim.css
+ * Restyle ONLY the MyST constructs Starlight has no native equivalent for.
+ * Admonitions and code are rewritten to native <Aside>/Expressive Code by the
+ * transpiler, so they never reach this file. Everything here uses Starlight's
+ * own --sl-* tokens, so it tracks light/dark and the site accent automatically.
+ * Unlayered (Starlight uses cascade layers) so these win over defaults.
+ */
+
+/* Numbered figures */
+figure { margin-block: 1.5rem; }
+figure figcaption {
+  color: var(--sl-color-gray-3);
+  font-size: var(--sl-text-sm);
+  border-top: 1px solid var(--sl-color-gray-5);
+  padding-top: 0.5rem;
+}
+figcaption .caption-number { color: var(--sl-color-text-accent); font-weight: 600; }
+
+/* Cross-reference chips that fell through to the fallback branch */
+a.xref, .myst.xref {
+  color: var(--sl-color-text-accent);
+  text-decoration-color: var(--sl-color-accent-low);
+}
+
+/* Dropdowns */
+details > summary {
+  color: var(--sl-color-white);
+  background: var(--sl-color-gray-6);
+  border-inline-start: 3px solid var(--sl-color-accent);
+  padding: 0.5rem 0.75rem; border-radius: 0.25rem; cursor: pointer;
+}
+
+/* Definition lists */
+dl dt { color: var(--sl-color-white); font-weight: 600; }
+dl dd { color: var(--sl-color-gray-2); margin-inline-start: 1rem; }

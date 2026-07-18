@@ -1,0 +1,56 @@
+name: Build & deploy blueprint
+
+on:
+  push: { branches: [main] }
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency: { group: pages, cancel-in-progress: true }
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # --- 1. Build the KMP transpiler (shared core -> JVM CLI) ---
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '21' }
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build transpiler
+        run: cd tool && gradle jvmJar --no-daemon
+
+      # --- 2. Resolve MyST -> AST JSON (xrefs & numbering baked in) ---
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - name: Install mystmd
+        run: npm install -g mystmd
+      - name: Resolve MyST AST
+        run: cd site/myst && myst build --site
+
+      # --- 3. Transpile AST -> MDX into Starlight ---
+      - name: Transpile to MDX
+        run: |
+          java -jar tool/build/libs/*-jvm.jar \
+            --in site/myst/_build/site/content \
+            --out site/src/content/docs
+
+      # --- 4. Build Starlight. `astro build` compiles every MDX file, so this
+      #        step IS the MDX compile gate — invalid generated MDX fails here. ---
+      - name: Build site (also the MDX compile gate)
+        run: cd site && npm ci && npm run build
+
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: site/dist }
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: { name: github-pages, url: '${{ steps.deployment.outputs.page_url }}' }
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

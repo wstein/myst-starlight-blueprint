@@ -1,0 +1,83 @@
+---
+// CodeMirrorEval.astro — the "full potential" demo.
+// A .astro component with its own <script> ships client JS WITHOUT any UI
+// framework, so it honours the no-React decision. Live evaluation runs in a
+// sandboxed Web Worker (no DOM access), keeping arbitrary example code off the
+// main thread.
+interface Props { code?: string; }
+const { code = '' } = Astro.props;
+---
+
+<div class="cm-eval not-content" data-initial={code}>
+  <div class="cm-eval__bar">
+    <span class="cm-eval__label">JavaScript · live</span>
+    <button class="cm-eval__run" type="button">Run ▸</button>
+  </div>
+  <div class="cm-eval__editor"></div>
+  <pre class="cm-eval__out" aria-live="polite"></pre>
+</div>
+
+<style>
+  .cm-eval {
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 0.5rem;
+    overflow: hidden;
+    margin-block: 1.5rem;
+  }
+  .cm-eval__bar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.4rem 0.75rem;
+    background: var(--sl-color-gray-6);
+    border-bottom: 1px solid var(--sl-color-gray-5);
+  }
+  .cm-eval__label {
+    font-size: var(--sl-text-xs); letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--sl-color-gray-2);
+  }
+  .cm-eval__run {
+    font: inherit; font-size: var(--sl-text-sm); cursor: pointer;
+    color: var(--sl-color-black);
+    background: var(--sl-color-text-accent);
+    border: 0; border-radius: 0.3rem; padding: 0.15rem 0.7rem;
+  }
+  .cm-eval__run:focus-visible { outline: 2px solid var(--sl-color-white); outline-offset: 2px; }
+  .cm-eval__out {
+    margin: 0; padding: 0.75rem;
+    background: var(--sl-color-gray-7, var(--sl-color-gray-6));
+    color: var(--sl-color-gray-1);
+    font-size: var(--sl-text-sm);
+    min-height: 2.5rem; white-space: pre-wrap;
+  }
+  .cm-eval__out[data-error] { color: var(--sl-color-red-high, var(--sl-color-red)); }
+</style>
+
+<script>
+  import { EditorView, basicSetup } from 'codemirror';
+  import { javascript } from '@codemirror/lang-javascript';
+
+  document.querySelectorAll<HTMLDivElement>('.cm-eval').forEach((root) => {
+    const initial = root.dataset.initial ?? '';
+    const host = root.querySelector<HTMLDivElement>('.cm-eval__editor')!;
+    const out = root.querySelector<HTMLPreElement>('.cm-eval__out')!;
+    const run = root.querySelector<HTMLButtonElement>('.cm-eval__run')!;
+
+    const view = new EditorView({
+      doc: initial,
+      extensions: [basicSetup, javascript()],
+      parent: host,
+    });
+
+    const worker = new Worker(new URL('./eval-worker.ts', import.meta.url), { type: 'module' });
+    worker.onmessage = (e: MessageEvent) => {
+      const { ok, logs, error } = e.data;
+      if (ok) { delete out.dataset.error; out.textContent = logs.join('\n') || '(no output)'; }
+      else { out.dataset.error = 'true'; out.textContent = error; }
+    };
+
+    run.addEventListener('click', () => {
+      out.removeAttribute('data-error');
+      out.textContent = 'Running…';
+      worker.postMessage(view.state.doc.toString());
+    });
+  });
+</script>
