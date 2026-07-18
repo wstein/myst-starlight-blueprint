@@ -5,4 +5,8 @@ project:
   toc:
     - file: index.md
 site:
-  template: none   # We do NOT use MyST's React theme; the transpiler feeds Starlight.
+  # `myst build --site` always resolves and downloads a real site template —
+  # there is no "skip the theme" option — even though we only consume the
+  # resolved AST JSON under _build/site/content/ and never render this
+  # template's own output; the transpiler feeds Starlight instead.
+  template: book-theme

@@ -124,8 +124,12 @@ Most first-push failures are configuration, not code:
 
 The full chain — `myst build --site` → transpile → `astro build` — has been run
 end-to-end locally against this repo's own content and produces a working
-`site/dist/` (search index included). Two failures only surfaced at that last,
-previously-unrun step, both now fixed here: `site/package-lock.json` wasn't
+`site/dist/` (search index included). Three failures only surfaced by actually
+running it, all now fixed here: `site/myst/myst.yml`'s `site.template: none`
+wasn't a real template — `myst build --site` always resolves and downloads an
+actual site template, so it 404'd looking one up literally named "none" (fixed
+by pinning `template: book-theme`, which is what it silently falls back to
+anyway if no valid template is given); `site/package-lock.json` wasn't
 committed, so CI's `npm ci` had nothing to install from; and `astro.config.mjs`'s
 `social` option used the array shape from Starlight ≥0.33 while `^0.30.0` (what
 `npm install` actually resolves) expects an object keyed by platform name.

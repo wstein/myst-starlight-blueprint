@@ -157,6 +157,11 @@ Key design points to preserve when touching this code:
 - The exact resolved-AST output path (`site/myst/_build/site/content/`) depends on
   the installed `mystmd` version; adjust `--in` in `make transpile` /
   `npm run transpile` if it changes.
+- `site/myst/myst.yml`'s `site.template` must name a real template (e.g.
+  `book-theme`) — `myst build --site` always resolves and downloads one over the
+  network even though we only consume the resolved AST JSON and never render its
+  output; a sentinel like `none` 404s instead of skipping template resolution.
+  `myst templates list --site` lists the valid options.
 - Pinned `site/package.json` versions are load-bearing: `@astrojs/starlight`
   changed the shape of the `social` config option between 0.30 and 0.33 (object
   keyed by platform name vs. an array of `{icon,label,href}`), and only
