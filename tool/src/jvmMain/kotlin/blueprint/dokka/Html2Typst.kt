@@ -46,10 +46,21 @@ object Html2Typst {
         // (any blank line is a paragraph break) but noisy in the source. Only
         // visible with real nested markup; hand-written test HTML is too flat
         // to produce it.
-        return ctx.output.toString().trim().replace(Regex("\n{3,}"), "\n\n")
+        val collapsed = ctx.output.toString().trim().replace(Regex("\n{3,}"), "\n\n")
+        // Every "]" in our own output closes a #link/#footnote/#quote/etc.
+        // content block. Typst treats a "]" immediately followed by "(" or
+        // "[" as continuing the SAME code-mode call chain rather than
+        // starting fresh markup — e.g. a Dokka function signature emits
+        // `#link(...)[attr](value: String)`, which Typst parses as calling
+        // the link's result with (value: String) as arguments, a hard parse
+        // error. Only found by actually running a real `typst compile` on
+        // dense signature content, not from the emitted string alone — a
+        // single inserted space is enough to break the ambiguity and is
+        // typographically harmless (`attr(value:` -> `attr (value:`).
+        return collapsed.replace(Regex("\\](?=[(\\[])"), "] ")
     }
 
-    private class Context {
+    private class Context(val footnotedUrls: MutableSet<String> = mutableSetOf()) {
         val tagStack = ArrayDeque<String>()
         val output = StringBuilder()
     }
@@ -164,12 +175,17 @@ object Html2Typst {
                     ctx.output.append("#link(\"").append(href).append("\")[")
                     walkDescendants(node, ctx, tag)
                     ctx.output.append(']')
-                    // A PDF reader can't always click through the way a web
-                    // link works, so spell the URL out as a footnote rather
-                    // than relying on the link text alone — only for links
-                    // to another PDF, not every link (those still work fine
-                    // as plain `#link`s for a reader following along on paper).
-                    if (href.substringBefore('#').substringBefore('?').endsWith(".pdf")) {
+                    // A reader of the rendered PDF can't click through the way
+                    // a web link works, so a link's destination is spelled out
+                    // as a footnote the first time it's seen on the page, not
+                    // just the link text — except a pure same-page anchor
+                    // (`#section`), which has no meaningful destination to
+                    // spell out beyond itself. Deduped per page (not per
+                    // occurrence): found via the real Dokka fixture that a
+                    // dense function signature can repeat the identical stdlib
+                    // link 2-3 times in one line, which without dedup meant
+                    // 2-3 near-duplicate footnotes for a single URL.
+                    if (!href.startsWith("#") && ctx.footnotedUrls.add(href)) {
                         ctx.output.append("#footnote[").append(href).append(']')
                     }
                 } else {
@@ -264,7 +280,7 @@ object Html2Typst {
         ctx.output.append("\n\n#table(\n  columns: ").append(columns).append(",\n")
         for (cells in cellRows) {
             for (cell in cells) {
-                val cellCtx = Context()
+                val cellCtx = Context(ctx.footnotedUrls) // shared, so URL dedup spans the whole page
                 walkDescendants(cell, cellCtx, cell.tagName().lowercase())
                 ctx.output.append("  [").append(cellCtx.output.toString().trim()).append("],\n")
             }

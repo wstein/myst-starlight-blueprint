@@ -1,6 +1,7 @@
 package blueprint.dokka
 
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -53,5 +54,19 @@ class RealDokkaFixtureTest {
         val out = Html2Mdx.convert(html)
         assertTrue(out.contains("[prose](prose.html)"))
         assertTrue(out.contains("[fence](fence.html)"))
+    }
+
+    @Test
+    fun typstConversionDedupsRepeatedStdlibLinkFootnotes() {
+        // This page's function signatures link to the same kotlin-stdlib
+        // String page many times over (every `value: String` / `: String`
+        // return type). Without dedup this was one footnote per occurrence —
+        // found by actually reading the converted output, not guessed.
+        val out = Html2Typst.convert(html)
+        val stdlibUrl = "https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html"
+        val linkCount = Regex(Regex.escape("#link(\"$stdlibUrl\")")).findAll(out).count()
+        val footnoteCount = Regex(Regex.escape("#footnote[$stdlibUrl]")).findAll(out).count()
+        assertTrue(linkCount > 1, "expected the stdlib String link to repeat on this page, got $linkCount")
+        assertEquals(1, footnoteCount)
     }
 }

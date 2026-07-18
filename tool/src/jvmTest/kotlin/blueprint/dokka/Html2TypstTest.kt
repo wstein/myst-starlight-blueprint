@@ -52,10 +52,21 @@ class Html2TypstTest {
     }
 
     @Test
-    fun linkBecomesTypstLinkFunction() {
+    fun linkBecomesTypstLinkFunctionWithFootnotedUrl() {
+        // Every link's destination is footnoted in the rendered PDF — a
+        // reader can't click through the way a web link works, so the URL
+        // needs to be visible on the page, not just the link text.
         assertEquals(
-            """#link("https://x.test")[go]""",
+            """#link("https://x.test")[go]#footnote[https://x.test]""",
             convert("""<a href="https://x.test">go</a>""")
+        )
+    }
+
+    @Test
+    fun rootRelativeLinkGetsAFootnoteToo() {
+        assertEquals(
+            """#link("/tool")[The tool]#footnote[/tool]""",
+            convert("""<a href="/tool">The tool</a>""")
         )
     }
 
@@ -68,18 +79,36 @@ class Html2TypstTest {
     }
 
     @Test
-    fun nonPdfLinkGetsNoFootnote() {
+    fun samePageAnchorLinkGetsNoFootnote() {
+        // Nothing meaningful to spell out beyond the anchor itself.
         assertEquals(
-            """#link("/tool")[The tool]""",
-            convert("""<a href="/tool">The tool</a>""")
+            """#link("#some-heading")[Jump]""",
+            convert("""<a href="#some-heading">Jump</a>""")
         )
     }
 
     @Test
-    fun pdfLinkWithQueryOrFragmentStillGetsAFootnote() {
+    fun repeatedIdenticalUrlOnlyFootnotedOnce() {
+        // Found via the real Dokka fixture: a dense function signature can
+        // repeat the identical stdlib link 2-3 times in one line. Without
+        // dedup that's 2-3 near-duplicate footnotes for a single URL.
+        val out = convert(
+            """<p><a href="https://x.test">a</a> and <a href="https://x.test">b</a></p>"""
+        )
         assertEquals(
-            """#link("/index.pdf?x=1")[Download]#footnote[/index.pdf?x=1]""",
-            convert("""<a href="/index.pdf?x=1">Download</a>""")
+            """#link("https://x.test")[a]#footnote[https://x.test] and #link("https://x.test")[b]""",
+            out
+        )
+    }
+
+    @Test
+    fun differentUrlsBothGetFootnoted() {
+        val out = convert(
+            """<p><a href="https://a.test">a</a> and <a href="https://b.test">b</a></p>"""
+        )
+        assertEquals(
+            """#link("https://a.test")[a]#footnote[https://a.test] and #link("https://b.test")[b]#footnote[https://b.test]""",
+            out
         )
     }
 

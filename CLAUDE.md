@@ -167,11 +167,21 @@ pages of this project's own KDoc, not just hand-written test HTML — see
   comment flags this as an unresolved "Consider" item — its unconditional
   `.trim()` on every text node drops real content, e.g.
   `<b>bold</b> and <i>em</i>` -> `boldand em`). One addition beyond the port:
-  a link to another `.pdf` gets a Typst `#footnote[<url>]` spelling out the
-  raw URL alongside the normal `#link`, since a PDF reader can't always click
-  through the way a web link works — verified with a real `typst compile`,
-  not just the emitted source string (footnote marker + numbered URL at the
-  page bottom, standard Typst footnote rendering).
+  every link (except a pure same-page `#anchor`) gets a Typst
+  `#footnote[<url>]` spelling out the raw URL alongside the normal `#link`,
+  since a reader of the rendered PDF can't click through the way a web link
+  works — deduped per page (a URL is only footnoted the first time it's seen;
+  found via the real Dokka fixture that a dense function signature can repeat
+  the identical stdlib link 2-3 times in one line, which without dedup meant
+  2-3 near-duplicate footnotes for the same URL — see `Context.footnotedUrls`).
+  A second bug only found by an actual `typst compile` (not just checking the
+  emitted source string): `#link(...)[text](more)` — a `]` immediately
+  followed by `(` or `[` — makes Typst treat the following markup as
+  continuing the *same* code-mode call rather than starting fresh content,
+  a hard parse error on Dokka's own `fun name(...)` signatures. Fixed with a
+  final regex pass inserting a space after any such `]`; every `]` in this
+  converter's own output closes one of its own content blocks, so the pass is
+  safe to apply globally rather than needing per-call-site lookahead.
 - `Html2Mdx` — written fresh (not a port) for the same job, targeting
   MDX/GFM instead of Typst. Reuses this repo's own `MdxEscaper` (prose + fence
   channels) rather than a second escaping implementation, so output escapes
@@ -221,10 +231,11 @@ step, frontmatter injection), not the conversion logic itself.
   rendered an empty group while both pages remained directly reachable by URL —
   reachable, but invisible in nav. Caught only by inspecting the built HTML's
   `<ul>`, not by any build error or `astro check` warning.
-- `site/public/` holds one generated PDF per page (`index.pdf`, `tool.pdf`;
-  gitignored, like the generated MDX) — `make pdf` / CI's PDF step must run
-  before `astro build` so they're present to be copied into `site/dist/`.
-  Not merged into one file: see `HeaderWithPdf.astro` below.
+- `site/public/` holds one generated PDF per page (`blueprint.pdf`, `tool.pdf`
+  — content-named, not route-named: the homepage's route id is `''` but its
+  PDF isn't `index.pdf`; gitignored, like the generated MDX) — `make pdf` /
+  CI's PDF step must run before `astro build` so they're present to be copied
+  into `site/dist/`. Not merged into one file: see `HeaderWithPdf.astro` below.
 - `site/src/components/HeaderWithPdf.astro` overrides Starlight's `Header`
   (`components: { Header: ... }` in `astro.config.mjs`) to add a per-page
   "Download as PDF" link in the topbar. Starlight's own `Header.astro` has no
@@ -242,12 +253,15 @@ step, frontmatter injection), not the conversion logic itself.
     the built HTML caught it, same as the sidebar `autogenerate` bug earlier).
     Re-verify this against `node_modules` again if bumping Starlight further,
     rather than assuming either form is permanent.
-  - **The PDF link uses an explicit page allowlist**, not "does a route id
-    exist" — `404.astro` also has a route id (`"404"`, not `undefined`), so an
-    existence check alone linked to a nonexistent `404.pdf`. The allowlist
-    (`PAGES_WITH_PDF`) is a third place (alongside `myst.yml`'s `toc` and
-    `astro.config.mjs`'s sidebar `items`) that must be kept in sync when a
-    page is added.
+  - **The PDF link uses an explicit route-id -> filename map**
+    (`PDF_FILENAME_BY_ROUTE_ID`), not "does a route id exist" — `404.astro`
+    also has a route id (`"404"`, not `undefined`), so an existence check
+    alone linked to a nonexistent `404.pdf`. The map doubles as the allowlist
+    and gives each page's PDF a content-derived name rather than a
+    route-derived one (homepage route id is `''`, PDF is `blueprint.pdf`, not
+    `index.pdf`). A fourth place (alongside `myst.yml`'s `toc`,
+    `astro.config.mjs`'s sidebar `items`, and each page's own frontmatter
+    `exports.output` path) that must be kept in sync when a page is added.
 - `site/tsconfig.json` and `site/src/env.d.ts` didn't exist before
   `HeaderWithPdf.astro` needed `import.meta.env.BASE_URL` typed — every Astro
   project is normally scaffolded with both; this one wasn't. Standard content
