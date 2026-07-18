@@ -55,7 +55,7 @@ jobs:
           myst build --typst index.md --force
           myst build --typst tool.md --force
           mkdir -p ../public
-          cp exports/index.pdf ../public/index.pdf
+          cp exports/blueprint.pdf ../public/blueprint.pdf
           cp exports/tool.pdf ../public/tool.pdf
 
       # --- 5. Build Starlight. `astro build` compiles every MDX file, so this

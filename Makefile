@@ -22,7 +22,7 @@ pdf:             ## Typst-export each MyST page to its own PDF in site/public/
 	cd site/myst && myst build --typst index.md --force
 	cd site/myst && myst build --typst tool.md --force
 	mkdir -p site/public
-	cp site/myst/exports/index.pdf site/public/index.pdf
+	cp site/myst/exports/blueprint.pdf site/public/blueprint.pdf
 	cp site/myst/exports/tool.pdf site/public/tool.pdf
 
 site:            ## Build the Starlight site (this is also the MDX compile gate)

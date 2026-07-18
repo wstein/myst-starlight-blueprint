@@ -6,7 +6,7 @@
     "tool:build": "cd tool && gradle jvmTest jvmJar",
     "myst:build": "cd site/myst && myst build --site",
     "transpile": "java -jar tool/build/libs/*-jvm.jar transpile --in site/myst/_build/site/content --out site/src/content/docs --base /myst-starlight-blueprint",
-    "pdf": "cd site/myst && myst build --typst index.md --force && myst build --typst tool.md --force && mkdir -p ../public && cp exports/index.pdf ../public/index.pdf && cp exports/tool.pdf ../public/tool.pdf",
+    "pdf": "cd site/myst && myst build --typst index.md --force && myst build --typst tool.md --force && mkdir -p ../public && cp exports/blueprint.pdf ../public/blueprint.pdf && cp exports/tool.pdf ../public/tool.pdf",
     "site:build": "cd site && npm run build",
     "pipeline": "npm run tool:build && npm run myst:build && npm run transpile && npm run pdf && npm run site:build"
   }

@@ -4,7 +4,7 @@ description: A reference architecture for docs with a single source of truth tha
 exports:
   - format: typst
     template: lapreprint-typst
-    output: exports/index.pdf
+    output: exports/blueprint.pdf
 ---
 
 Most documentation stacks make you choose: author in a simple, structured
@@ -18,7 +18,7 @@ The page you're reading is the proof, not a pitch: everything below was
 authored in MyST, transpiled to MDX by `myst2mdx`, and built by Astro
 Starlight — the pipeline demonstrating itself with its own output.
 
-**[Download this page as a PDF ↓](/index.pdf)** — the same MyST source,
+**[Download this page as a PDF ↓](/blueprint.pdf)** — the same MyST source,
 exported through `mystmd`'s Typst pipeline; no separate content to maintain.
 Every page has its own PDF (the topbar link above always points at the one
 for whatever page you're on).

@@ -2,8 +2,9 @@
 // Starlight's own Header.astro has no <slot/>, so wrapping it silently drops
 // any extra content passed as children — this reconstructs it instead,
 // importing the same sub-components, to add a per-page PDF download link.
-// See CLAUDE.md for why: the link must be per-document (index.pdf, tool.pdf,
-// future kdoc-derived pages), not one shared sidebar entry for a merged PDF.
+// See CLAUDE.md for why: the link must be per-document (blueprint.pdf,
+// tool.pdf, future kdoc-derived pages), not one shared sidebar entry for a
+// merged PDF.
 import config from 'virtual:starlight/user-config';
 
 import LanguageSelect from 'virtual:starlight/components/LanguageSelect';
@@ -16,11 +17,17 @@ const shouldRenderSearch =
 	config.pagefind || config.components.Search !== '@astrojs/starlight/components/Search.astro';
 
 // Mirrors site/myst/myst.yml's `toc` and astro.config.mjs's sidebar `items`
-// (same three-way sync this repo already documents in CLAUDE.md) — the pages
-// that actually have a PDF export. An allowlist, not "does a route id exist,"
-// because 404.astro also has a (non-empty, non-''), id of "404" — id presence
-// alone can't distinguish real content pages from Astro's own special routes.
-const PAGES_WITH_PDF = new Set(['', 'tool']);
+// (same three-way sync this repo already documents in CLAUDE.md) — maps each
+// page's route id to its PDF's filename. Doubles as the allowlist: a route id
+// with no entry here gets no PDF link. Not "does a route id exist," because
+// 404.astro also has a (non-empty, non-''), id of "404" — id presence alone
+// can't distinguish real content pages from Astro's own special routes.
+// Filenames are content-derived (blueprint.pdf), not route-derived
+// (index.pdf) — the homepage's route id is '' but the PDF isn't "index.pdf".
+const PDF_FILENAME_BY_ROUTE_ID = new Map([
+	['', 'blueprint'],
+	['tool', 'tool'],
+]);
 
 // Starlight >=0.41 (needed for the Markdoc preset) exposes route data via
 // Astro.locals.starlightRoute — the older ^0.30.0 pin this repo started on
@@ -29,11 +36,9 @@ const PAGES_WITH_PDF = new Set(['', 'tool']);
 // silently carries nothing on this version. Re-verified by grepping
 // node_modules again after the upgrade, not assumed to still be true.
 const routeId = Astro.locals.starlightRoute?.id;
-// Starlight's route id is '' for the homepage, not 'index' — matches this
-// site's own PDF export filenames (site/myst/index.md -> exports/index.pdf).
-const slug = routeId === '' ? 'index' : routeId;
+const pdfFilename = routeId !== undefined ? PDF_FILENAME_BY_ROUTE_ID.get(routeId) : undefined;
 const base = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}/`;
-const pdfHref = routeId !== undefined && PAGES_WITH_PDF.has(routeId) ? `${base}${slug}.pdf` : undefined;
+const pdfHref = pdfFilename ? `${base}${pdfFilename}.pdf` : undefined;
 ---
 
 <div class="header">
