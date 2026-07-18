@@ -39,8 +39,14 @@ kotlin {
         val jvmMain by getting {
             dependencies {
                 implementation("com.github.ajalt.clikt:clikt:5.0.1")
+                // HTML parser backing Html2Typst — jsoup, not a hand-rolled parser,
+                // for the same reason mystmd (not our own MyST parser) backs the
+                // MDX pipeline: don't reimplement a spec-compliant parser upstream
+                // already solved.
+                implementation("org.jsoup:jsoup:1.18.1")
             }
         }
+        val jvmTest by getting
         val jsMain by getting
     }
 }

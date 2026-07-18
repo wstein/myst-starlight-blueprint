@@ -103,9 +103,12 @@ tool/src/
 │                                 provenance banner + body
 ├── jvmMain/…/Cli.kt             JVM target: clikt CLI, walks a dir of AST JSON files,
 │                                 writes .mdx (this is what CI/make invoke)
-└── jsMain/…/WebApi.kt           JS target: @JsExport'd transpileToMdx(), the exact
-                                  same Transpiler core — exported, but no browser UI
-                                  consumes it yet (see rough edges below)
+├── jsMain/…/WebApi.kt           JS target: @JsExport'd transpileToMdx(), the exact
+│                                 same Transpiler core — exported, but no browser UI
+│                                 consumes it yet (see rough edges below)
+└── jvmMain/…/dokka/             HTML -> Typst and HTML -> MDX converters (see below);
+                                  unrelated to the MyST pipeline above, and not wired
+                                  into anything yet — tested, standalone code only
 ```
 
 `Transpiler.transpile(astJson, sourcePath)` is the single entry point both targets
@@ -140,6 +143,34 @@ Key design points to preserve when touching this code:
   onto Starlight's 4 `<Aside>` types. `MdxEmitter.aside` only forwards an explicit
   `title` when the author's title differs from the kind's default, to avoid
   duplicating Starlight's own default title.
+
+### `tool/jvmMain/…/dokka/` — HTML-to-Typst / HTML-to-MDX converters (unwired)
+
+Two standalone, unrelated-to-MyST converters, `jvmMain`-only (both depend on
+`jsoup`, JVM-only):
+
+- `Html2Typst` — ported from `adriandelgado/html2typst` (Rust, MIT) and
+  extended with `<pre>`/`<code>`/`<table>` support, which upstream leaves as
+  `todo!()`/panics on. Two deliberate deviations from the port, both documented
+  in its class KDoc: unrecognized tags fall back to rendering descendants
+  instead of crashing (matching this repo's `HtmlFallback` philosophy), and
+  inter-element whitespace is preserved rather than stripped (upstream's own
+  comment flags this as an unresolved "Consider" item — its unconditional
+  `.trim()` on every text node drops real content, e.g.
+  `<b>bold</b> and <i>em</i>` -> `boldand em`).
+- `Html2Mdx` — written fresh (not a port) for the same job, targeting
+  MDX/GFM instead of Typst. Reuses this repo's own `MdxEscaper` (prose + fence
+  channels) rather than a second escaping implementation, so output escapes
+  exactly like `myst2mdx`'s own MyST-derived MDX.
+
+**Neither is wired into anything.** No Dokka dependency exists in this
+project, no CI step calls either converter, no CLI command exposes them, and
+neither is merged into `blueprint.pdf` or `site/src/content/docs/`. They exist
+as tested (`Html2TypstTest`, `Html2MdxTest`) but standalone utility code —
+built as the first phase of a KDoc -> published-docs pipeline that stalled
+there. Wiring either one to real Dokka output (adding the Dokka Gradle plugin,
+a CLI entry point, a merge step) is unscoped, deliberately deferred work — see
+[Known rough edges](#known-rough-edges-per-readmes-own-caveats).
 
 ### `site/` — Astro Starlight
 
@@ -239,3 +270,9 @@ Key design points to preserve when touching this code:
   TeX distribution installed (`which latexmk` is checked and fails otherwise).
   `--typst` needs only the `typst` CLI, a single ~40MB binary — that's why the
   PDF pipeline uses Typst, not LaTeX.
+- **`Html2Typst`/`Html2Mdx` (`tool/jvmMain/…/dokka/`) are tested but not wired
+  to anything.** No Dokka dependency, no CI step, no CLI command, no merge
+  into `blueprint.pdf` or `site/src/content/docs/`. Before wiring either one
+  up: Dokka's Markdown/GFM output format is itself "currently in Alpha" per
+  its own README, and neither converter has been run against real Dokka HTML
+  yet, only hand-written fixtures — expect gaps once real output meets them.
