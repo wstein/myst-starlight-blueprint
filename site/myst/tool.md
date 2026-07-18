@@ -1,6 +1,10 @@
 ---
 title: The Tool
 description: How the Kotlin Multiplatform transpiler turns resolved MyST AST into Starlight MDX.
+exports:
+  - format: typst
+    template: lapreprint-typst
+    output: exports/tool.pdf
 ---
 
 This page is the second proof of the blueprint's premise: it is authored in

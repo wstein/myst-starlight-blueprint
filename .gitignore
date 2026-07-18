@@ -2,6 +2,10 @@
 site/src/content/docs/**/*.mdx
 site/myst/_build/
 
+# Generated PDF export (Typst) and its merged copy — BUILD ARTIFACTS, never committed.
+site/myst/exports/
+site/public/
+
 # Astro / Node
 node_modules/
 site/dist/

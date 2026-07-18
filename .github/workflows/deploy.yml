@@ -40,7 +40,25 @@ jobs:
             --out site/src/content/docs \
             --base /myst-starlight-blueprint
 
-      # --- 4. Build Starlight. `astro build` compiles every MDX file, so this
+      # --- 4. Export MyST -> PDF (Typst, no LaTeX needed) and merge each page's
+      #        export into one downloadable file. Must run before the site build
+      #        below, since Astro copies site/public/ verbatim into site/dist/. ---
+      - uses: typst-community/setup-typst@v3
+      - name: Install qpdf
+        run: sudo apt-get update && sudo apt-get install -y qpdf
+      - name: Export and merge PDF
+        run: |
+          cd site/myst
+          # One file per invocation, not `myst build --typst index.md tool.md`:
+          # a same-run first-time template download races across files and can
+          # fail with "invalid template.yml" — this is a clean checkout every
+          # CI run, so the race would hit every time, not just occasionally.
+          myst build --typst index.md --force
+          myst build --typst tool.md --force
+          mkdir -p ../public
+          qpdf --empty --pages exports/index.pdf exports/tool.pdf -- ../public/blueprint.pdf
+
+      # --- 5. Build Starlight. `astro build` compiles every MDX file, so this
       #        step IS the MDX compile gate — invalid generated MDX fails here. ---
       - name: Build site (also the MDX compile gate)
         run: cd site && npm ci && npm run build

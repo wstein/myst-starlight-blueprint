@@ -1,6 +1,10 @@
 ---
 title: The Blueprint
 description: A reference architecture for docs with a single source of truth that still ships an interactive site — proven by rendering itself.
+exports:
+  - format: typst
+    template: lapreprint-typst
+    output: exports/index.pdf
 ---
 
 Most documentation stacks make you choose: author in a simple, structured
@@ -13,6 +17,10 @@ interactivity included.
 The page you're reading is the proof, not a pitch: everything below was
 authored in MyST, transpiled to MDX by that tool, and built by Astro
 Starlight — the pipeline demonstrating itself with its own output.
+
+**[Download this site as a PDF ↓](/blueprint.pdf)** — the same MyST source,
+exported through `mystmd`'s Typst pipeline and merged in CI; no separate
+content to maintain.
 
 ## What "native" buys you
 

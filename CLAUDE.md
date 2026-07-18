@@ -30,18 +30,19 @@ it or add content there expecting it to persist.
 
 ## Commands
 
-Local pipeline requires JDK 21, Node 22, and `mystmd` (`npm install -g mystmd`).
-`flake.nix` provides a Nix devShell with JDK 21, Node 22, and Gradle pre-wired —
-`nix develop` (or `direnv allow` via the checked-in `.envrc`); `mystmd` still
-needs its own `npm install -g mystmd`.
+Local pipeline requires JDK 21, Node 22, `mystmd` (`npm install -g mystmd`),
+`typst`, and `qpdf` (both used only by `make pdf`).
+`flake.nix` provides a Nix devShell with all of those except `mystmd`
+pre-wired — `nix develop` (or `direnv allow` via the checked-in `.envrc`).
 
 ```
-make pipeline     # full chain: tool -> myst -> transpile -> site
+make pipeline     # full chain: tool -> myst -> transpile -> pdf -> site
 make tool         # cd tool && gradle jvmTest jvmJar   (tests, then builds the fat JVM CLI jar)
 make myst         # cd site/myst && myst build --site   (resolve MyST -> AST JSON)
 make transpile    # java -jar tool/build/libs/*-jvm.jar --in <ast-json-dir> --out site/src/content/docs --base <astro-base>
+make pdf          # myst build --typst per page, merge with qpdf -> site/public/blueprint.pdf
 make site         # cd site && npm ci && npm run build   (also the MDX compile gate)
-make clean        # rm generated .mdx, _build, dist, tool/build
+make clean        # rm generated .mdx, _build, exports, public, dist, tool/build
 ```
 
 `npm run pipeline` in the repo root does the same thing via `package.json` scripts
@@ -71,9 +72,11 @@ Astro site, run from `site/`:
   this is the correctness gate for the whole pipeline)
 - `npm run check` — `astro check` (type/diagnostics check)
 
-CI (`.github/workflows/deploy.yml`) runs the exact same four steps on push to
-`main` (build tool jar → resolve MyST AST → transpile → build+deploy site), so it
-is the authoritative sequence if `make pipeline` and CI ever diverge.
+CI (`.github/workflows/deploy.yml`) runs the exact same steps on push to `main`
+(build tool jar → resolve MyST AST → transpile → export+merge PDF → build+deploy
+site), so it is the authoritative sequence if `make pipeline` and CI ever
+diverge. The PDF step must run before the site build — Astro copies
+`site/public/` verbatim into `site/dist/` at build time.
 
 ## Architecture
 
@@ -139,7 +142,10 @@ Key design points to preserve when touching this code:
 ### `site/` — Astro Starlight
 
 - `site/myst/` is the actual authored content (`index.md`, `tool.md`, `myst.yml`
-  TOC). This is what you edit when changing docs content.
+  TOC). This is what you edit when changing docs content. Each page's own
+  frontmatter declares an `exports: [{format: typst, template: lapreprint-typst}]`
+  entry — that's what `make pdf` / the CI PDF step consume; there's no
+  project-level export in `myst.yml` (see rough edges below for why).
 - `site/src/content/docs/**/*.mdx` is generated output (gitignored) — only exists
   after running the transpile step; don't expect it to be present in a fresh
   checkout or to persist edits.
@@ -155,6 +161,9 @@ Key design points to preserve when touching this code:
   this as a template must repoint all three to their own GitHub Pages URL/repo.
 - Sidebar is currently `autogenerate` from the docs directory; the intent (per
   README) is eventually to generate it from `myst.yml`'s `toc`, not yet wired up.
+- `site/public/` only ever holds the generated `blueprint.pdf` (gitignored, like
+  the generated MDX) — `make pdf` / CI's PDF step must run before `astro build`
+  so it's present to be copied into `site/dist/`.
 
 ## Known rough edges (per README's own caveats)
 
@@ -184,3 +193,34 @@ Key design points to preserve when touching this code:
   for trusted docs examples, not for untrusted third-party code.
 - Live eval is static-output-only; MyST's executable/notebook features are
   intentionally out of scope.
+- **mystmd's project-level "combined book" PDF export is unreliable — don't use
+  it.** A single `exports:` entry in `myst.yml` referencing the whole `toc`
+  looks like the natural way to get one multi-page PDF, but against this repo's
+  content it silently rendered only one of the two pages (the other was pulled
+  in as a link-resolution "dependency," not merged content) despite logging
+  "Built 2 pages for export." The working alternative: each page declares its
+  own per-file `exports:` entry, `myst build --typst` renders each to its own
+  PDF, and `qpdf` merges them after the fact — see `make pdf`.
+- Cross-page anchor links (a link into a specific heading on a *different* MyST
+  page, e.g. `[text](./tool.md#some-heading)`) work fine for the Starlight site
+  but break the PDF export: each page compiles to Typst independently, so a
+  label that only exists in another page's document is an unresolved-label
+  compile error, not a warning. Keep cross-page links plain (no `#fragment`).
+- `myst build --typst` downloads its named template (`lapreprint-typst`) fresh
+  from `github.com/myst-templates/*` at build time, same as the `--site`
+  template. One known issue in that template: an admonition's title can be
+  separated from its body across a page break, because the box isn't wrapped
+  in Typst's `block(breakable: false)`. Not patched here — would require
+  vendoring a local copy of the template instead of tracking upstream.
+- **Never pass multiple files to one `myst build --typst` invocation** (e.g.
+  `myst build --typst index.md tool.md`) — on a clean checkout this reliably
+  fails with `Cannot use invalid template.yml`: both files' exports race the
+  same first-time template download and one reads a partial write. `make pdf`
+  / `npm run pdf` / the CI step each call `myst build --typst <file> --force`
+  once per file instead, so the first call's download finishes before the
+  second starts. This bit CI specifically because it always runs from a clean
+  checkout — it would have failed every run, not occasionally.
+- `--pdf` (LaTeX via `latexmk`) was tried first and rejected: it needs a full
+  TeX distribution installed (`which latexmk` is checked and fails otherwise).
+  `--typst` needs only the `typst` CLI, a single ~40MB binary — that's why the
+  PDF pipeline uses Typst, not LaTeX.
