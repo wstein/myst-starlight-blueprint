@@ -11,11 +11,11 @@ Most documentation stacks make you choose: author in a simple, structured
 format and get a static site, or hand-write MDX/HTML and get interactivity.
 This project is a reference architecture for **not choosing** — MyST Markdown
 stays the single source of truth, and a purpose-built [Kotlin Multiplatform
-transpiler](./tool.md) turns its resolved AST into native Starlight pages,
-interactivity included.
+transpiler, `myst2mdx`](./tool.md), turns its resolved AST into native
+Starlight pages, interactivity included.
 
 The page you're reading is the proof, not a pitch: everything below was
-authored in MyST, transpiled to MDX by that tool, and built by Astro
+authored in MyST, transpiled to MDX by `myst2mdx`, and built by Astro
 Starlight — the pipeline demonstrating itself with its own output.
 
 **[Download this site as a PDF ↓](/blueprint.pdf)** — the same MyST source,

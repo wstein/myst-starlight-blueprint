@@ -8,16 +8,17 @@ exports:
 ---
 
 This page is the second proof of the blueprint's premise: it is authored in
-MyST, transpiled to MDX by the exact tool it describes, and rendered by
-Starlight below. [The blueprint](./index.md) shows the pipeline as a whole;
-this page shows the piece that makes it work.
+MyST, transpiled to MDX by `myst2mdx` — the exact tool it describes — and
+rendered by Starlight below. [The blueprint](./index.md) shows the pipeline as
+a whole; this page shows the piece that makes it work.
 
 ## An orchestrator, not a documentation engine
 
-`tool/` does not parse MyST — `mystmd` does that upstream, before this page's
-AST ever reaches the transpiler. It does not render generic Markdown either —
-Astro/MDX does that downstream. It owns exactly one thing: the policy of how a
-*resolved* MyST AST node maps onto a Starlight or MDX construct.
+`myst2mdx` does not parse MyST — `mystmd` does that upstream, before this
+page's AST ever reaches the transpiler. It does not render generic Markdown
+either — Astro/MDX does that downstream. It owns exactly one thing: the
+policy of how a *resolved* MyST AST node maps onto a Starlight or MDX
+construct.
 
 :::{note}
 "Resolved" is load-bearing. Cross-references, numbering, and the table of

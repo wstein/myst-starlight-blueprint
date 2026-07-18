@@ -51,11 +51,13 @@ is gitignored on purpose: it is output, not source.
 | Live editor | **CodeMirror 6, vanilla** | Interactive island with **no React**, per the framework decision |
 | Live eval | **Web Worker** | Runs example JS off the main thread, no DOM access |
 
-## The custom tool: `tool/` (Kotlin Multiplatform)
+## The custom tool: `myst2mdx` (`tool/`, Kotlin Multiplatform)
 
 A deliberate **orchestrator**, not a documentation engine. It doesn't parse MyST
 (mystmd does) or render generic Markdown (MDX/Astro does). It owns exactly the
-parts that encode *your policy*:
+parts that encode *your policy*. Its CLI is `myst2mdx` (`gradle jvmJar` builds
+`myst2mdx-jvm.jar`), and every generated MDX file carries its name in a
+provenance banner comment:
 
 ```
 tool/src/
@@ -244,7 +246,7 @@ committed, so CI's `npm ci` had nothing to install from; and `astro.config.mjs`'
 ├── package.json                  ← npm-script equivalents
 ├── flake.nix                     ← `nix develop` — JDK 21 + Node 22 + Gradle + Typst + qpdf
 ├── .github/workflows/deploy.yml  ← self-render → GitHub Pages (+ MDX compile gate)
-├── tool/                         ← Kotlin Multiplatform transpiler (CLI + web + tests)
+├── tool/                         ← `myst2mdx`, the Kotlin Multiplatform transpiler (CLI + web + tests)
 └── site/                         ← Astro Starlight + MyST source + live-eval island
     ├── myst/                     ← MyST source of truth (index.md, tool.md, myst.yml)
     ├── src/components/           ← CodeMirrorEval.astro + eval-worker.ts

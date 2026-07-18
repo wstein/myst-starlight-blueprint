@@ -48,9 +48,10 @@ make clean        # rm generated .mdx, _build, exports, public, dist, tool/build
 `npm run pipeline` in the repo root does the same thing via `package.json` scripts
 (`myst:build`, `transpile`, `site:build`).
 
-Kotlin tool, run from `tool/`:
-- `gradle jvmJar` — build the CLI fat jar (`tool/build/libs/*-jvm.jar`, bundles the
-  runtime classpath, main class `blueprint.CliKt`)
+Kotlin tool (`myst2mdx`), run from `tool/`:
+- `gradle jvmJar` — build the CLI fat jar (`tool/build/libs/myst2mdx-jvm.jar`,
+  matched by the `*-jvm.jar` glob elsewhere; bundles the runtime classpath,
+  main class `blueprint.CliKt`, CLI command name `myst2mdx`)
 - `gradle jvmTest` — run `commonTest` + `jvmMain`-specific tests on the JVM target
   (this is what CI and `make tool` run before `jvmJar`)
 - `gradle jsBrowserProductionWebpack` (or equivalent JS target task) — build the
@@ -80,7 +81,7 @@ diverge. The PDF step must run before the site build — Astro copies
 
 ## Architecture
 
-### `tool/` — Kotlin Multiplatform transpiler
+### `tool/` — `myst2mdx`, the Kotlin Multiplatform transpiler
 
 Deliberately an *orchestrator*, not a documentation engine: it does not parse MyST
 (mystmd does that upstream) and does not render generic Markdown (MDX/Astro does
