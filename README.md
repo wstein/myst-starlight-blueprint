@@ -1,35 +1,42 @@
 # MyST → Starlight Blueprint
 
-A documentation stack that **is its own worked example**. The docs are authored in
-MyST Markdown, transpiled to MDX by a Kotlin Multiplatform tool, and built by Astro
-Starlight into a static site that deploys to GitHub Pages. The site you get out is
-the specification of the pipeline that produced it — blueprint and template in one.
+> One MyST source → an interactive Starlight site, no duplication. A
+> self-rendering docs stack with live code editing, unified search, and a shared
+> theme, plus the Kotlin Multiplatform transpiler that wires MyST to Starlight.
+> The repo builds itself as the example. Fork it as a template.
 
-This repository is the concrete form of a longer design discussion. The short
-version of *why each piece is here* is below; the code is the rest of the argument.
+This repository is a **tech-stack idea**, not just a tool: a reference
+architecture for documentation that has a single source of truth and still ships
+an interactive web experience. The custom transpiler in `tool/` exists only to
+make the idea cohere — it's the cog, not the point.
 
-## The pipeline
+The proof is the repo itself: everything here is authored in MyST, transpiled to
+MDX by the Kotlin Multiplatform tool, and built by Astro Starlight into the site
+you deploy. Blueprint, template, and worked example in one.
 
+## The idea in one picture
+
+```mermaid
+flowchart TD
+    A["<b>site/myst/*.md</b><br/>MyST source — single source of truth<br/><i>you edit only this</i>"]:::source
+    B["_build/site/content/*.json<br/>resolved MyST AST (mdast-based)"]
+    C["site/src/content/docs/*.mdx<br/>generated MDX — build artifact, never edited"]:::artifact
+    D["site/dist/<br/>static site"]
+    E(["GitHub Pages"])
+
+    A -->|"mystmd · myst build --site<br/>resolve xrefs, numbering, TOC"| B
+    B -->|"KMP transpiler · shared core to JVM CLI<br/>native-first, HTML-fallback"| C
+    C -->|"astro build (Starlight + MDX)<br/>◄ the MDX compile gate"| D
+    D --> E
+
+    classDef source fill:#dcfce7,stroke:#16a34a,color:#14532d;
+    classDef artifact fill:#f1f5f9,stroke:#94a3b8,color:#334155,stroke-dasharray:4 3;
 ```
-  site/myst/*.md          MyST source — the single source of truth (you edit this)
-        │
-        │  mystmd  (myst build --site)      parse + RESOLVE xrefs, numbering, TOC
-        ▼
-  _build/site/content/*.json      resolved MyST AST  (mdast-based)
-        │
-        │  KMP transpiler  (shared core → JVM CLI)     native-first, HTML-fallback
-        ▼
-  site/src/content/docs/*.mdx     generated MDX  — a BUILD ARTIFACT, never edited
-        │
-        │  astro build   (Starlight + MDX)             ← this step is the MDX compile gate
-        ▼
-  site/dist/                      static site → GitHub Pages
-```
 
-Everything downstream of the MyST source is regenerated on every build. The MDX is
-gitignored on purpose: it is output, not source.
+Everything downstream of the MyST source is regenerated on every build. The MDX
+is gitignored on purpose: it is output, not source.
 
-## Why this shape (the load-bearing decisions)
+## Why this stack (the load-bearing decisions)
 
 | Decision | Choice | Why |
 |---|---|---|
@@ -41,11 +48,11 @@ gitignored on purpose: it is output, not source.
 | Live editor | **CodeMirror 6, vanilla** | Interactive island with **no React**, per the framework decision |
 | Live eval | **Web Worker** | Runs example JS off the main thread, no DOM access |
 
-## The tool: `tool/` (Kotlin Multiplatform)
+## The custom tool: `tool/` (Kotlin Multiplatform)
 
-The transpiler is deliberately an **orchestrator**, not a documentation engine. It
-does not parse MyST (mystmd does) and does not render generic Markdown (MDX/Astro
-does). It owns exactly the parts that encode *your policy*:
+A deliberate **orchestrator**, not a documentation engine. It doesn't parse MyST
+(mystmd does) or render generic Markdown (MDX/Astro does). It owns exactly the
+parts that encode *your policy*:
 
 ```
 tool/src/
@@ -62,59 +69,78 @@ tool/src/
                                  `gradle jvmTest`, wired into CI before `jvmJar`
 ```
 
-The same `Transpiler.transpile(...)` runs in CI (as a JVM jar walking JSON files)
-and in the browser (as a JS function behind a live playground). That is the
-"shared code for CLI and web" requirement, satisfied by construction rather than
-by copy-paste.
+The same `Transpiler.transpile(...)` runs in CI (a JVM jar walking JSON files)
+and in the browser (a JS function behind a live playground) — "shared code for
+CLI and web" satisfied by construction, not copy-paste.
 
-### Escaping is retired, not risked
+**Escaping is retired, not risked.** Every character is routed through one of four
+channels: prose is neutralised, code fences pass through verbatim, attributes are
+entity-escaped, and the raw-HTML fallback emits JSX-valid markup. The build then
+runs the real MDX compiler (`astro build`) as a gate, so correctness is verified.
 
-MDX generation breaks when stray `{`, `<`, or backticks hit the compiler. The
-emitter routes every character through one of four channels (`MdxEscaper`): prose
-text is neutralised, code fences pass through verbatim with an auto-sized fence,
-component attributes are entity-escaped, and the raw-HTML fallback emits
-**JSX-valid** markup (self-closed voids, quoted attrs). The build then runs the
-real MDX compiler (`astro build`) as a gate, so correctness is *verified*, not
-trusted.
-
-### Native where possible, fallback where not
-
-`NodeMapping.NATIVE` lists the node types with a true Starlight/MDX equivalent;
-everything else lands in the styled HTML fallback. This is what keeps the
-permanent CSS surface (`site/src/styles/myst-shim.css`) tiny — admonitions and
-code never reach it because they are rewritten to native `<Aside>` and Expressive
-Code.
+**Native where possible, fallback where not.** Admonitions and code are rewritten
+to native `<Aside>` and Expressive Code, so they never reach the CSS shim
+(`site/src/styles/myst-shim.css`) — which is why the permanent styling surface
+stays tiny.
 
 ## The signature: live JS evaluation
 
 `site/myst/index.md` contains a `js-eval` code block. The transpiler maps it to
 `<CodeMirrorEval>` — a vanilla CodeMirror 6 island whose Run button posts the
-current editor contents to a sandboxed Web Worker and streams the console output
-back. No React, no main-thread eval.
+editor contents to a sandboxed Web Worker and streams the console output back. No
+React, no main-thread eval.
 
 ## Use it as a template
 
-1. Click **Use this template** on GitHub (or clone).
-2. In `site/astro.config.mjs`, set `SITE`/`BASE` to your Pages URL and repo.
+1. Click **Use this template** on GitHub (or fork).
+2. In `site/astro.config.mjs`, set `SITE = 'https://<you>.github.io'` and
+   `BASE = '/<your-repo>'`.
 3. Write MyST in `site/myst/`, list pages in `site/myst/myst.yml`'s `toc`.
-4. Push to `main`. The workflow builds the tool, resolves MyST, transpiles, builds
-   Starlight, and deploys to Pages.
+4. Push to `main`. The workflow tests + builds the tool, resolves MyST,
+   transpiles, builds Starlight, and deploys to Pages.
 
 Locally: `make pipeline` runs the whole chain (needs JDK 21, Node 22, `mystmd`).
-With Nix, `nix develop` drops you into a shell with JDK 21, Node 22, and Gradle
-already on `PATH` (matching CI); it still nudges you to `npm install -g mystmd`.
+A `flake.nix` is provided — `nix develop` (or `direnv allow`, via the checked-in
+`.envrc`) drops you into a shell with JDK 21, Node 22, and Gradle already on
+`PATH` (matching CI); it still nudges you to `npm install -g mystmd` yourself.
+
+## First run — do these before watching the Actions tab
+
+Most first-push failures are configuration, not code:
+
+- [ ] **Pages source = GitHub Actions.** Settings → Pages → Source → *GitHub
+  Actions* (not "deploy from branch"), or the deploy job fails at the end.
+- [ ] **Set `SITE` and `BASE`** in `astro.config.mjs` to your Pages URL and repo
+  name — wrong `BASE` ships a site with broken CSS/links even on a green build.
+- [ ] **Commit a Gradle wrapper:** `cd tool && gradle wrapper` once, then commit.
+  CI's setup-gradle prefers it and it makes `./gradlew` work locally.
+- [ ] **Verify the mystmd AST path.** Run `myst build --site` locally and confirm
+  the JSON lands in `_build/site/content/`; if not, fix `--in` in the workflow
+  and `Makefile`.
+- [ ] **Check the pinned action majors.** `.github/workflows/deploy.yml` currently
+  pins `checkout@v4`, `setup-java@v4`, `setup-node@v4`, `setup-gradle@v4`,
+  `upload-pages-artifact@v3`, `deploy-pages@v4` — bump any that a newer major has
+  since replaced.
 
 ## Honest caveats
 
-- **mystmd AST path.** `myst build --site` writes resolved AST under
-  `_build/site/content/`; confirm the exact path for your mystmd version and
-  adjust `--in` if needed.
+- **`MystNode` field assumptions are the ongoing risk.** `kind` on admonitions and
+  `url` on resolved cross-references only fully surface when real content flows
+  through; a wrong assumption silently falls through to the HTML fallback instead
+  of failing a build. `tool/src/commonTest/.../RealAstFixtureTest.kt` grounds the
+  suite in a real `mystmd build --site` capture to catch this class of bug —
+  extend that fixture (or add new ones) whenever you lean on a new AST field.
 - **Web Worker is isolation, not a security sandbox.** Fine for trusted docs
-  examples; do not run untrusted third-party code through it.
+  examples; don't run untrusted third-party code through it.
 - **Static live-eval only.** MyST's executable/notebook features are intentionally
-  out of scope here — this path renders static output by design.
+  out of scope; this path renders static output by design.
 - **Starlight inner aside markup.** The emitter targets `<Aside>`; if you ever
   bypass it and hand-write aside classes, match Starlight's rendered structure.
+
+## Suggested repo topics
+
+`myst` · `starlight` · `astro` · `mdx` · `documentation` · `single-source` ·
+`kotlin-multiplatform` · `github-pages`
 
 ## Layout
 
@@ -122,8 +148,10 @@ already on `PATH` (matching CI); it still nudges you to `npm install -g mystmd`.
 .
 ├── README.md                     ← this blueprint
 ├── CLAUDE.md                     ← guidance for Claude Code when working in this repo
+├── LICENSE                       ← MIT
 ├── Makefile                      ← `make pipeline`
 ├── package.json                  ← npm-script equivalents
+├── flake.nix                     ← `nix develop` — JDK 21 + Node 22 + Gradle
 ├── .github/workflows/deploy.yml  ← self-render → GitHub Pages (+ MDX compile gate)
 ├── tool/                         ← Kotlin Multiplatform transpiler (CLI + web + tests)
 └── site/                         ← Astro Starlight + MyST source + live-eval island
@@ -132,3 +160,7 @@ already on `PATH` (matching CI); it still nudges you to `npm install -g mystmd`.
     ├── src/styles/myst-shim.css  ← orphan-construct shim (Starlight tokens)
     └── astro.config.mjs
 ```
+
+## License
+
+MIT — see [LICENSE](LICENSE).

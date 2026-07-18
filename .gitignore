@@ -24,5 +24,8 @@ tool/kotlin-js-store/
 hs_err_pid*
 replay_pid*
 
+# Nix / direnv
+.direnv/
+
 # OS
 .DS_Store

@@ -28,6 +28,9 @@ it or add content there expecting it to persist.
 ## Commands
 
 Local pipeline requires JDK 21, Node 22, and `mystmd` (`npm install -g mystmd`).
+`flake.nix` provides a Nix devShell with JDK 21, Node 22, and Gradle pre-wired —
+`nix develop` (or `direnv allow` via the checked-in `.envrc`); `mystmd` still
+needs its own `npm install -g mystmd`.
 
 ```
 make pipeline     # full chain: tool -> myst -> transpile -> site
