@@ -1,10 +1,28 @@
 # Generated MDX is a BUILD ARTIFACT — never edited, never committed.
 site/src/content/docs/**/*.mdx
 site/myst/_build/
-# Standard
+
+# Astro / Node
 node_modules/
 site/dist/
 .astro/
+
+# This repo standardizes on npm (package-lock.json) — ignore other package
+# managers' lockfiles so they don't get committed by accident.
+yarn.lock
+bun.lockb
+bun.lock
+
+# Kotlin / Gradle
 tool/build/
 .gradle/
 .kotlin/
+# Yarn lockfile for the JS target's test/dev toolchain (karma, webpack, mocha).
+# Not committed: the JS playground isn't built in CI, only the JVM CLI is.
+tool/kotlin-js-store/
+*.class
+hs_err_pid*
+replay_pid*
+
+# OS
+.DS_Store
