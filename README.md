@@ -5,6 +5,9 @@
 > theme, plus the Kotlin Multiplatform transpiler that wires MyST to Starlight.
 > The repo builds itself as the example. Fork it as a template.
 
+**[Live demo →](https://wstein.github.io/myst-starlight-blueprint/)** — the repo
+you're reading deployed, live-JS editor included.
+
 This repository is a **tech-stack idea**, not just a tool: a reference
 architecture for documentation that has a single source of truth and still ships
 an interactive web experience. The custom transpiler in `tool/` exists only to
@@ -76,7 +79,8 @@ CLI and web" satisfied by construction, not copy-paste.
 **Escaping is retired, not risked.** Every character is routed through one of four
 channels: prose is neutralised, code fences pass through verbatim, attributes are
 entity-escaped, and the raw-HTML fallback emits JSX-valid markup. The build then
-runs the real MDX compiler (`astro build`) as a gate, so correctness is verified.
+runs the real MDX compiler (`astro build`) as a gate, so correctness is verified —
+not trusted (see [Honest caveats](#honest-caveats) for the one gap this doesn't close).
 
 **Native where possible, fallback where not.** Admonitions and code are rewritten
 to native `<Aside>` and Expressive Code, so they never reach the CSS shim
@@ -88,7 +92,7 @@ stays tiny.
 `site/myst/index.md` contains a `js-eval` code block. The transpiler maps it to
 `<CodeMirrorEval>` — a vanilla CodeMirror 6 island whose Run button posts the
 editor contents to a sandboxed Web Worker and streams the console output back. No
-React, no main-thread eval.
+React, no main-thread eval. [Try it on the live site →](https://wstein.github.io/myst-starlight-blueprint/)
 
 ## Use it as a template
 
@@ -117,10 +121,9 @@ Most first-push failures are configuration, not code:
 - [ ] **Verify the mystmd AST path.** Run `myst build --site` locally and confirm
   the JSON lands in `_build/site/content/`; if not, fix `--in` in the workflow
   and `Makefile`.
-- [ ] **Check the pinned action majors.** `.github/workflows/deploy.yml` currently
-  pins `checkout@v4`, `setup-java@v4`, `setup-node@v4`, `setup-gradle@v4`,
-  `upload-pages-artifact@v3`, `deploy-pages@v4` — bump any that a newer major has
-  since replaced.
+- [ ] **Check the pinned action majors.** Confirm the actions pinned in
+  `.github/workflows/deploy.yml` are still current majors — GitHub's Security tab
+  flags outdated actions on the repo once it's live.
 
 The full chain — `myst build --site` → transpile → `astro build` — has been run
 end-to-end locally against this repo's own content and produces a working

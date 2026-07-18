@@ -21,6 +21,9 @@ site/src/content/docs/*.mdx     generated MDX — a BUILD ARTIFACT, never edited
 site/dist/                      static site → GitHub Pages
 ```
 
+(Mirrors the Mermaid diagram in `README.md`'s "The idea in one picture" — keep
+both in sync if the pipeline's steps or artifact paths change.)
+
 Everything downstream of the MyST source is regenerated on every build. Generated
 `.mdx` under `site/src/content/docs/**` is gitignored on purpose — never hand-edit
 it or add content there expecting it to persist.
@@ -147,8 +150,9 @@ Key design points to preserve when touching this code:
   still lands in the HTML fallback branch. Keeping `NodeMapping.NATIVE` complete
   is what keeps this file small — prefer extending native mapping over adding
   shim CSS for a new construct.
-- `site/astro.config.mjs` has placeholder `SITE`/`BASE` values (`YOUR-USER`) meant
-  to be set per-deployment when this repo is used as a template.
+- `site/astro.config.mjs`'s `SITE`/`BASE`/`social` values are set for this repo's
+  own deployment (`wstein.github.io/myst-starlight-blueprint`) — anyone forking
+  this as a template must repoint all three to their own GitHub Pages URL/repo.
 - Sidebar is currently `autogenerate` from the docs directory; the intent (per
   README) is eventually to generate it from `myst.yml`'s `toc`, not yet wired up.
 
