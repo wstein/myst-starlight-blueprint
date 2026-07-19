@@ -200,6 +200,12 @@ object Html2Typst {
 
             "table" -> emitTable(node, ctx)
 
+            // See Html2Mdx's matching case: Dokka's tab/platform-toggle
+            // buttons are live UI controls, not content, in a static export —
+            // their label text (e.g. a duplicate "Types") would otherwise
+            // leak into the fallback branch below as unstyled noise.
+            "button" -> Unit
+
             else -> {
                 // Graceful fallback (see class doc): render descendants, don't crash.
                 walkDescendants(node, ctx, tag)

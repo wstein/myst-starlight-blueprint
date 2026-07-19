@@ -155,6 +155,16 @@ object Html2Mdx {
 
             "table" -> emitTable(node, ctx)
 
+            // Dokka's own tab/platform toggles (e.g. the "Types"/"Functions"
+            // section-tab buttons, the per-symbol "jvm" platform-bookmark
+            // button) are live UI controls with no JS behind them in a static
+            // export — the graceful fallback below would otherwise leak their
+            // label text into prose as unstyled noise, duplicating the real
+            // "## Types"/"## Functions" headings that follow. Found by reading
+            // the real Dokka HTML (data-togglable/data-toggle attributes), not
+            // guessed from the rendered symptom alone.
+            "button" -> Unit
+
             else -> walkDescendants(node, ctx, tag) // graceful fallback — see class doc
         }
     }

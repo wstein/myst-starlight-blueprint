@@ -98,4 +98,24 @@ class Html2MdxTest {
         // MdxEscaper.prose neutralises `{`, `}`, `<`, backtick — same channel myst2mdx's own emitter uses.
         assertEquals("a \\{b\\} c", convert("<p>a {b} c</p>"))
     }
+
+    @Test
+    fun tabToggleButtonIsSkippedNotLeakedAsProse() {
+        // Dokka's own section-tab control (a live UI toggle in the real site,
+        // dead weight in a static export) — its label text used to leak in
+        // and duplicate the real "## Types" heading that follows.
+        val out = convert(
+            """<div class="tabs-section"><button class="section-tab" data-togglable="TYPE">Types</button></div>
+               <h2>Types</h2>"""
+        )
+        assertEquals("## Types", out)
+    }
+
+    @Test
+    fun platformBookmarkButtonIsSkippedNotLeakedAsProse() {
+        val out = convert(
+            """<p>before</p><button class="platform-bookmark" data-toggle=":/jvmMain">jvm</button><p>after</p>"""
+        )
+        assertEquals("before\n\nafter", out)
+    }
 }

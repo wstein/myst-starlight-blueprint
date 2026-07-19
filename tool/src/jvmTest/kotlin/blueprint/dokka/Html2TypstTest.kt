@@ -178,4 +178,24 @@ class Html2TypstTest {
         val out = convert("""<img src="data:image/png;base64,aGk=" alt="tiny">""")
         assertTrue(out.contains("bytes((104, 105))"))
     }
+
+    @Test
+    fun tabToggleButtonIsSkippedNotLeakedAsProse() {
+        // See Html2MdxTest's matching case: Dokka's own dead-in-static-export
+        // tab-toggle button used to leak its label text as unstyled prose,
+        // duplicating the real heading that follows.
+        val out = convert(
+            """<div class="tabs-section"><button class="section-tab" data-togglable="TYPE">Types</button></div>
+               <h2>Types</h2>"""
+        )
+        assertEquals("== Types", out)
+    }
+
+    @Test
+    fun platformBookmarkButtonIsSkippedNotLeakedAsProse() {
+        val out = convert(
+            """<p>before</p><button class="platform-bookmark" data-toggle=":/jvmMain">jvm</button><p>after</p>"""
+        )
+        assertEquals("before\n\nafter", out)
+    }
 }
