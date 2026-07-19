@@ -9,12 +9,14 @@
     "check": "astro check"
   },
   "dependencies": {
+    "@astrojs/markdoc": "^2.0.3",
     "@astrojs/mdx": "^7.0.3",
     "@astrojs/starlight": "^0.41.3",
-    "astro": "^7.0.2",
-    "codemirror": "^6.0.1",
+    "@astrojs/starlight-markdoc": "^0.7.0",
     "@codemirror/lang-javascript": "^6.2.2",
     "@codemirror/state": "^6.4.1",
-    "@codemirror/view": "^6.34.1"
+    "@codemirror/view": "^6.34.1",
+    "astro": "^7.0.2",
+    "codemirror": "^6.0.1"
   }
 }

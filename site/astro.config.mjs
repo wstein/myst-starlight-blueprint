@@ -1,5 +1,6 @@
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
+import markdoc from '@astrojs/markdoc';
 
 // GitHub Pages: set these to your repo. The pipeline deploys site/dist here.
 const SITE = 'https://wstein.github.io';
@@ -9,6 +10,7 @@ export default defineConfig({
   site: SITE,
   base: BASE,
   integrations: [
+    markdoc(),
     starlight({
       title: 'MyST → Starlight Blueprint',
       description: 'A self-rendering blueprint: MyST source, KMP transpiler, Starlight output.',
