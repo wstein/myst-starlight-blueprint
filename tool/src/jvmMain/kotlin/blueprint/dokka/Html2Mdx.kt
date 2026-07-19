@@ -78,6 +78,16 @@ object Html2Mdx {
     private fun walkElement(node: Element, ctx: Context) {
         if (node.classNames().any { it in DOKKA_CHROME_CLASSES }) return // see class doc
 
+        // KMP platform-availability badges (e.g. a package's "common"/"js"/
+        // "jvm" tags) are real content, unlike the button chrome above — but
+        // each is its own <div>, so the generic "div" case below would stack
+        // them one per line instead of the compact inline group a badge
+        // reads as. Render as a space-joined inline code run instead.
+        if ("platform-tag" in node.classNames()) {
+            ctx.output.append('`').append(node.text().trim()).append("` ")
+            return
+        }
+
         when (val tag = node.tagName().lowercase()) {
             "b", "strong" -> wrap(node, ctx, "**", "**")
             "i", "em" -> wrap(node, ctx, "*", "*")

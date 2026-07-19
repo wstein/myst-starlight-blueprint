@@ -96,3 +96,9 @@ aside.
 Eleven admonition kinds, four aside types — the mapping lives in
 `NodeMapping.ASIDE`, not in this prose, so it can't drift out of sync with
 what just rendered above it.
+
+## Next
+
+[Browse the generated API reference →](/api/) — every public declaration in
+`tool/`, transpiled from its own KDoc comments by the same `dokka2mdx`
+subcommand described above, not hand-written.

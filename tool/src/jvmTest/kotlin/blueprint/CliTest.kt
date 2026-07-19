@@ -44,3 +44,24 @@ class RenderDokkaMdxPageTest {
         assertEquals("---\ntitle: MdxEscaper\n---\n\n# Overview\n\nEscapes MDX-sensitive characters.", out)
     }
 }
+
+class RewriteModuleIndexLinksTest {
+
+    @Test
+    fun subtreePrefixIsStrippedAndFirstSegmentDotsAreHyphenated() {
+        val out = rewriteModuleIndexLinks("[blueprint.ast](myst2mdx/blueprint.ast/index.html)", "myst2mdx")
+        assertEquals("[blueprint.ast](blueprint-ast/index.html)", out)
+    }
+
+    @Test
+    fun rootPackageLinkWithNoDotsIsUnaffectedBeyondPrefixStrip() {
+        val out = rewriteModuleIndexLinks("[blueprint](myst2mdx/blueprint/index.html)", "myst2mdx")
+        assertEquals("[blueprint](blueprint/index.html)", out)
+    }
+
+    @Test
+    fun linksOutsideTheSubtreeAreLeftAlone() {
+        val out = rewriteModuleIndexLinks("[stdlib](https://kotlinlang.org/api/core/kotlin-stdlib/index.html)", "myst2mdx")
+        assertEquals("[stdlib](https://kotlinlang.org/api/core/kotlin-stdlib/index.html)", out)
+    }
+}

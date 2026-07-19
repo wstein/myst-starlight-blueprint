@@ -71,8 +71,10 @@ class Dokka2Typst : CliktCommand(name = "dokka2typst") {
  * Starlight frontmatter Html2Mdx deliberately doesn't add itself (it's a
  * body-only converter — see its class KDoc). `--in` should point at the
  * generated site's per-symbol subtree (e.g. tool/build/dokka/html/myst2mdx),
- * not the whole `dokka/html` output — that also contains index.html and
- * navigation.html, Dokka's own site chrome, not real content pages.
+ * not the whole `dokka/html` output — navigation.html/search-worker.json
+ * alongside it are pure site chrome. One exception: `--in`'s own *sibling*
+ * `index.html` (one level up — the module's real "Packages" overview, not
+ * chrome) is also converted, into `output/index.mdx` — see [run].
  */
 class Dokka2Mdx : CliktCommand(name = "dokka2mdx") {
     val input by option("--in", help = "Dir of Dokka-generated HTML (e.g. tool/build/dokka/html/myst2mdx)").required()
@@ -98,7 +100,45 @@ class Dokka2Mdx : CliktCommand(name = "dokka2mdx") {
                 .writeText(renderDokkaMdxPage(htmlFile.readText(), fallbackTitle))
             count++
         }
+
+        // Dokka's module-root "Packages" overview (a real landing page: every
+        // package name + its common/js/jvm platform availability) lives one
+        // level ABOVE --in, since --in is scoped to the per-symbol subtree to
+        // exclude navigation.html/search chrome that sits alongside it at the
+        // same root. Without this, api/ had no index of its own — a reader
+        // landing on /api/ (or the sidebar group heading, once it links to an
+        // index page) got nothing. Only found by diffing this pipeline's
+        // output against a real `dokkaGenerate` run's full file tree.
+        val moduleIndex = File(inDir.parentFile, "index.html")
+        if (moduleIndex.isFile) {
+            val page = renderDokkaMdxPage(moduleIndex.readText(), "API reference")
+            File(outDir, "index.mdx").writeText(rewriteModuleIndexLinks(page, inDir.name))
+            count++
+        }
+
         echo("Converted $count Dokka page(s) -> $output (MDX)")
+    }
+}
+
+/**
+ * The module overview page links into the per-symbol subtree with paths
+ * prefixed by that subtree's own directory name (e.g.
+ * "myst2mdx/blueprint.ast/index.html") and un-hyphenated package dots —
+ * neither matches routes this pipeline actually generates (flat under
+ * `output/`, dots hyphenated per [Dokka2Mdx.run]) — so strip the prefix and
+ * hyphenate the first path segment the same way.
+ */
+internal fun rewriteModuleIndexLinks(mdx: String, subtreeDirName: String): String {
+    val linkPattern = Regex("""]\(${Regex.escape("$subtreeDirName/")}([^)]+)\)""")
+    return linkPattern.replace(mdx) { match ->
+        val path = match.groupValues[1]
+        val slash = path.indexOf('/')
+        val rewritten = if (slash >= 0) {
+            path.take(slash).replace('.', '-') + path.substring(slash)
+        } else {
+            path.replace('.', '-')
+        }
+        "]($rewritten)"
     }
 }
 

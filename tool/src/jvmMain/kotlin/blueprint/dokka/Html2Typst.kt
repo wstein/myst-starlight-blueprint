@@ -111,6 +111,17 @@ object Html2Typst {
     private fun walkElement(node: Element, ctx: Context) {
         if (node.classNames().any { it in DOKKA_CHROME_CLASSES }) return // see class doc
 
+        // See Html2Mdx's matching case: KMP platform-availability badges are
+        // real content, but each is its own <div> — without this they'd
+        // stack one per line via the generic "div" case below instead of
+        // reading as the compact inline group a badge is meant to be.
+        if ("platform-tag" in node.classNames()) {
+            val text = node.text().trim()
+            val fence = rawFence(text, minLen = 1)
+            ctx.output.append(fence).append(text).append(fence).append(' ')
+            return
+        }
+
         when (val tag = node.tagName().lowercase()) {
             "sub" -> inlineWrap(node, ctx, "#sub[", "]")
             "sup" -> inlineWrap(node, ctx, "#super[", "]")

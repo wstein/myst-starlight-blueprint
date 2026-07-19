@@ -198,4 +198,15 @@ class Html2TypstTest {
         )
         assertEquals("before\n\nafter", out)
     }
+
+    @Test
+    fun platformTagsRenderAsAnInlineCodeGroupNotOneStackedLinePerTag() {
+        val out = convert(
+            """<div class="platform-tags">
+                 <div class="platform-tag common-like">common</div>
+                 <div class="platform-tag jvm-like">jvm</div>
+               </div>"""
+        )
+        assertEquals("`common` `jvm`", out)
+    }
 }
