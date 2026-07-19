@@ -7,7 +7,7 @@
     "myst:build": "cd site/myst && myst build --site",
     "transpile": "java -jar tool/build/libs/*-jvm.jar transpile --in site/myst/_build/site/content --out site/src/content/docs --base /myst-starlight-blueprint",
     "dokka:build": "cd tool && gradle dokkaGenerate",
-    "api": "java -jar tool/build/libs/*-jvm.jar dokka2mdx --in tool/build/dokka/html/myst2mdx --out site/src/content/docs/api",
+    "api": "rm -rf site/public/api && mkdir -p site/public/api && cp -r tool/build/dokka/html/. site/public/api/",
     "pdf": "cd site/myst && myst build --typst index.md --force && myst build --typst tool.md --force && mkdir -p ../public && cp exports/blueprint.pdf ../public/blueprint.pdf && cp exports/tool.pdf ../public/tool.pdf",
     "site:build": "cd site && npm run build",
     "pipeline": "npm run tool:build && npm run myst:build && npm run transpile && npm run dokka:build && npm run api && npm run pdf && npm run site:build"

@@ -30,13 +30,13 @@ export default defineConfig({
         // (`directory: '.'` or `''`) matches nothing, silently rendering an
         // empty sidebar group — explicit entries sidestep that entirely.
         { label: 'Start here', items: ['index', 'tool'] },
-        // Unlike the root-level case above, `api/` is a real nested directory
-        // so `autogenerate` does match here — verified by inspecting the built
-        // sidebar HTML, not assumed from the root-level failure above.
-        // Starlight >=0.39 removed the `{ label, autogenerate }` shorthand
-        // this repo used pre-upgrade; `autogenerate` now has to be nested
-        // inside `items` (caught by the build itself, not a doc read).
-        { label: 'API reference', items: [{ autogenerate: { directory: 'api' } }] },
+        // api/ isn't a Starlight content collection: it's Dokka's own
+        // generated HTML site, copied verbatim into site/public/api/ (see
+        // Makefile's `api` target) so it keeps its own theme, search, and
+        // nav rather than being lossy-converted into MDX — so this is a
+        // plain link, not `autogenerate` (there's no content collection
+        // entry here for Starlight to walk).
+        { label: 'API reference', link: '/api/' },
       ],
     }),
   ],

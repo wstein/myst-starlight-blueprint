@@ -18,10 +18,12 @@ transpile:       ## AST JSON -> generated MDX in Starlight
 dokka:           ## Generate Dokka HTML from the tool's own KDoc comments
 	cd tool && gradle dokkaGenerate
 
-api:             ## Dokka HTML -> generated MDX under Starlight's api/ (sidebar: astro.config.mjs)
-	java -jar tool/build/libs/*-jvm.jar dokka2mdx \
-		--in tool/build/dokka/html/myst2mdx \
-		--out site/src/content/docs/api
+api:             ## Copy Dokka's own generated HTML site verbatim into site/public/api/ (served as-is: its own
+                 ## theme, search, and nav — not lossy-converted into Starlight content; see astro.config.mjs
+                 ## sidebar and site/myst/tool.md's link for how it's reached from the rest of the site)
+	rm -rf site/public/api
+	mkdir -p site/public/api
+	cp -r tool/build/dokka/html/. site/public/api/
 
 pdf:             ## Typst-export each MyST page to its own PDF in site/public/
 	# One file per invocation, not `myst build --typst index.md tool.md`: a
@@ -37,4 +39,4 @@ site:            ## Build the Starlight site (this is also the MDX compile gate)
 	cd site && npm ci && npm run build
 
 clean:
-	rm -rf site/src/content/docs/*.mdx site/src/content/docs/api site/myst/_build site/myst/exports site/public site/dist tool/build
+	rm -rf site/src/content/docs/*.mdx site/myst/_build site/myst/exports site/public site/dist tool/build

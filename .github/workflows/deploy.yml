@@ -41,15 +41,18 @@ jobs:
             --base /myst-starlight-blueprint
 
       # --- 4. Generate KDoc reference from the tool's own doc comments and
-      #        transpile it into Starlight's api/ (autogenerate sidebar group,
-      #        see astro.config.mjs). ---
+      #        copy Dokka's own generated HTML site verbatim into
+      #        site/public/api/ — served as-is (its own theme, search, nav),
+      #        not lossy-converted into Starlight content. Must run before the
+      #        site build below, since Astro copies site/public/ verbatim into
+      #        site/dist/ (see astro.config.mjs's sidebar link + PDF step
+      #        below, which shares the same site/public/ copy-through). ---
       - name: Generate KDoc reference
         run: |
           cd tool && gradle dokkaGenerate --no-daemon
           cd ..
-          java -jar tool/build/libs/*-jvm.jar dokka2mdx \
-            --in tool/build/dokka/html/myst2mdx \
-            --out site/src/content/docs/api
+          mkdir -p site/public/api
+          cp -r tool/build/dokka/html/. site/public/api/
 
       # --- 5. Export each MyST page -> its own PDF (Typst, no LaTeX needed).
       #        One PDF per page, not merged: the topbar's download link is

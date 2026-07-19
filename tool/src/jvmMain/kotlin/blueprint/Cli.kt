@@ -15,11 +15,13 @@ import java.io.File
 /**
  * `myst2mdx` is one CLI with subcommands, not three separate binaries: they
  * share this file, this jar, and (transpile / dokka2mdx) the same MdxEscaper
- * escaping policy. `transpile` is the original, CI-invoked command; the two
- * `dokka2*` subcommands are new and not yet called from anywhere (see
- * CLAUDE.md's rough edges) — they exist so Html2Typst/Html2Mdx are reachable
- * outside a test suite, which is the actual prerequisite for wiring either
- * one into a real pipeline.
+ * escaping policy. `transpile` is the original, CI-invoked command. The two
+ * `dokka2*` subcommands are CLI-reachable and tested but not called from
+ * CI/Makefile: the live site instead copies Dokka's own generated HTML
+ * verbatim into `site/public/api/` (see Makefile's `api` target) so it keeps
+ * its own theme/search/nav rather than being lossy-converted into MDX/Typst
+ * — `dokka2mdx`/`dokka2typst` stay available for whatever needs an actual
+ * MDX/Typst rendering of KDoc content (e.g. a future merged PDF).
  */
 class Myst2Mdx : NoOpCliktCommand(name = "myst2mdx")
 
